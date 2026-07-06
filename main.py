@@ -37,7 +37,7 @@ async def chat(request: ChatRequest):
     try:
         client = Groq(api_key=GROQ_API_KEY)
         response = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             messages=conversations[request.session_id]
         )
         reply = response.choices[0].message.content
