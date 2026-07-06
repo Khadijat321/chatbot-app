@@ -131,9 +131,13 @@ async def build_website(request: ChatRequest):
 
 Description: {request.message}
 
-Requirements:
+CRITICAL RULES:
+- Use ONLY CSS gradients, colors, and shapes for visuals - NO external images
+- If you need images, use CSS-only designs (geometric shapes, patterns, icons using CSS)
+- Use Font Awesome icons via CDN if needed: https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css
+- For photos/people, use placeholder services like: https://via.placeholder.com/ or https://picsum.photos/
 - Single HTML file with embedded CSS and JavaScript
-- Modern, beautiful design with gradients and animations
+- Modern, beautiful design with gradients, shadows, animations
 - Fully responsive for mobile and desktop
 - Interactive elements with JavaScript
 - Professional quality"""
