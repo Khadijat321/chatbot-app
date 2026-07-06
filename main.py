@@ -21,7 +21,7 @@ class ChatRequest(BaseModel):
     session_id: str = "default"
 
 # Replace with your actual Groq API key
-      GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 @app.post("/chat")
 async def chat(request: ChatRequest):
