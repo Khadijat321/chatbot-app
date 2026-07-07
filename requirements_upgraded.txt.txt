@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+groq
+pydantic
+python-multipart
+matplotlib
+numpy
+pandas
+requests
+PyPDF2
+openpyxl
+faiss-cpu
+gTTS
