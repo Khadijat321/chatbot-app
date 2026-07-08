@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Omni AI - All Intelligence. One Interface.</title>
+    <title>Omni AI v3 - All Intelligence. One Interface.</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -999,6 +999,7 @@
         }
     </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
     <div class="bg-mesh"></div>
@@ -1079,6 +1080,27 @@
         <button class="mode-btn" data-mode="rag" onclick="setMode('rag')">
             <span class="mode-icon">📚</span> <span>RAG</span>
         </button>
+        <button class="mode-btn" data-mode="academic" onclick="setMode('academic')">
+            <span class="mode-icon">📚</span> <span>Academic</span>
+        </button>
+        <button class="mode-btn" data-mode="financial" onclick="setMode('financial')">
+            <span class="mode-icon">💰</span> <span>Finance</span>
+        </button>
+        <button class="mode-btn" data-mode="creative" onclick="setMode('creative')">
+            <span class="mode-icon">✍️</span> <span>Creative</span>
+        </button>
+        <button class="mode-btn" data-mode="study" onclick="setMode('study')">
+            <span class="mode-icon">📖</span> <span>Study</span>
+        </button>
+        <button class="mode-btn" data-mode="debate" onclick="setMode('debate')">
+            <span class="mode-icon">⚖️</span> <span>Debate</span>
+        </button>
+        <button class="mode-btn" data-mode="emotional" onclick="setMode('emotional')">
+            <span class="mode-icon">💙</span> <span>Emotional</span>
+        </button>
+        <button class="mode-btn" data-mode="image_search" onclick="setMode('image_search')">
+            <span class="mode-icon">🔎</span> <span>Img Search</span>
+        </button>
     </nav>
 
     <div class="main-layout">
@@ -1088,6 +1110,36 @@
                 <div class="feature-list" id="featureList">
                     <div class="feature-item"><span class="feature-dot on"></span> Conversational AI</div>
                     <div class="feature-item"><span class="feature-dot on"></span> Computer Vision</div>
+                        <div class="capability-card" onclick="setMode('academic')">
+                            <span class="cap-icon">📚</span>
+                            <div class="cap-name">Academic</div>
+                            <div class="cap-desc">Search papers & research</div>
+                        </div>
+                        <div class="capability-card" onclick="setMode('financial')">
+                            <span class="cap-icon">💰</span>
+                            <div class="cap-name">Finance</div>
+                            <div class="cap-desc">Stock & market data</div>
+                        </div>
+                        <div class="capability-card" onclick="setMode('creative')">
+                            <span class="cap-icon">✍️</span>
+                            <div class="cap-name">Creative</div>
+                            <div class="cap-desc">Stories, poems & scripts</div>
+                        </div>
+                        <div class="capability-card" onclick="setMode('study')">
+                            <span class="cap-icon">📖</span>
+                            <div class="cap-name">Study</div>
+                            <div class="cap-desc">Guides & explanations</div>
+                        </div>
+                        <div class="capability-card" onclick="setMode('debate')">
+                            <span class="cap-icon">⚖️</span>
+                            <div class="cap-name">Debate</div>
+                            <div class="cap-desc">Arguments & negotiation</div>
+                        </div>
+                        <div class="capability-card" onclick="setMode('emotional')">
+                            <span class="cap-icon">💙</span>
+                            <div class="cap-name">Emotional</div>
+                            <div class="cap-desc">Empathetic support</div>
+                        </div>
                     <div class="feature-item"><span class="feature-dot on"></span> Code Execution</div>
                     <div class="feature-item"><span class="feature-dot on"></span> Image Generation</div>
                     <div class="feature-item"><span class="feature-dot on"></span> Web Search</div>
@@ -1098,7 +1150,14 @@
                     <div class="feature-item"><span class="feature-dot on"></span> Sentiment Analysis</div>
                     <div class="feature-item"><span class="feature-dot on"></span> Document RAG</div>
                     <div class="feature-item"><span class="feature-dot on"></span> Chart Generation</div>
-                </div>
+                
+                    <div class="feature-item"><span class="feature-dot on"></span> Academic Research</div>
+                    <div class="feature-item"><span class="feature-dot on"></span> Financial Data</div>
+                    <div class="feature-item"><span class="feature-dot on"></span> Creative Writing</div>
+                    <div class="feature-item"><span class="feature-dot on"></span> Study Guides</div>
+                    <div class="feature-item"><span class="feature-dot on"></span> Debate & Negotiation</div>
+                    <div class="feature-item"><span class="feature-dot on"></span> Emotional Intelligence</div>
+                    <div class="feature-item"><span class="feature-dot on"></span> Image Search</div></div>
             </div>
 
             <div class="sidebar-section">
@@ -1109,7 +1168,9 @@
                     <span class="api-name">Weather</span><span class="api-status warn" id="weatherStatus"></span>
                     <span class="api-name">News</span><span class="api-status warn" id="newsStatus"></span>
                     <span class="api-name">TTS</span><span class="api-status warn" id="ttsStatus"></span>
-                </div>
+                
+                    <span class="api-name">Academic</span><span class="api-status ok" id="academicStatus"></span>
+                    <span class="api-name">Financial</span><span class="api-status ok" id="financialStatus"></span></div>
             </div>
 
             <div class="sidebar-section">
@@ -1119,7 +1180,13 @@
                     <div class="tip-item"><span class="tip-icon">👁️</span> Upload images in Vision mode for analysis</div>
                     <div class="tip-item"><span class="tip-icon">🤖</span> Agent mode auto-detects the best tools</div>
                     <div class="tip-item"><span class="tip-icon">📊</span> Paste CSV data in Analyze mode for charts</div>
-                    <div class="tip-item"><span class="tip-icon">📚</span> Upload PDFs in RAG mode, then ask questions</div>
+                    <div class="tip-item"><span class="tip-icon">📚</span> Upload PDFs in RAG mode, then ask questions
+                    <div class="tip-item"><span class="tip-icon">📚</span> Search academic papers in Academic mode</div>
+                    <div class="tip-item"><span class="tip-icon">💰</span> Check stock prices with Finance mode</div>
+                    <div class="tip-item"><span class="tip-icon">✍️</span> Write stories, poems, and scripts in Creative mode</div>
+                    <div class="tip-item"><span class="tip-icon">📖</span> Get study guides at any level in Study mode</div>
+                    <div class="tip-item"><span class="tip-icon">⚖️</span> Practice debate skills in Debate mode</div>
+                    <div class="tip-item"><span class="tip-icon">💙</span> Get empathetic support in Emotional mode</div></div>
                 </div>
             </div>
         </aside>
@@ -1267,7 +1334,14 @@
             toastContainer.appendChild(toast);
             setTimeout(function() {
                 toast.classList.add('exit');
-                setTimeout(function() { toast.remove(); }, 300);
+                setTimeout(function() { toast.remove(); },
+        academic:  { endpoint: '/academic',      placeholder: 'Search for academic papers on any topic...',               typing: 'Searching academic databases...' },
+        financial: { endpoint: '/financial',     placeholder: 'Enter stock symbol (e.g., AAPL, TSLA, GOOGL)...',        typing: 'Fetching financial data...' },
+        creative:  { endpoint: '/creative',      placeholder: 'Describe your creative writing idea (story, poem, script)...', typing: 'Creating your masterpiece...' },
+        study:     { endpoint: '/study',         placeholder: 'What topic do you want to study? Set your level...',        typing: 'Building study guide...' },
+        debate:    { endpoint: '/debate',        placeholder: 'What topic should we debate? Pick a stance...',            typing: 'Forming arguments...' },
+        emotional: { endpoint: '/emotional',     placeholder: 'Share how you are feeling or what is on your mind...',      typing: 'Listening with empathy...' },
+        image_search: { endpoint: '/search-images', placeholder: 'What images do you want to search for?...',             typing: 'Searching images...' }, 300);
             }, 3000);
         }
 
@@ -1386,12 +1460,29 @@
             var config = modeConfig[currentMode];
 
             try {
-                var body = JSON.stringify({
+                var extraParams = {};
+                if (currentMode === 'creative') {
+                    extraParams.genre = 'story'; // Could add UI selector
+                } else if (currentMode === 'study') {
+                    extraParams.level = 'intermediate';
+                } else if (currentMode === 'debate') {
+                    extraParams.stance = null;
+                } else if (currentMode === 'translate') {
+                    extraParams.target_language = 'en';
+                } else if (currentMode === 'tts') {
+                    extraParams.lang = 'en';
+                } else if (currentMode === 'image_search') {
+                    extraParams.num_results = 5;
+                } else if (currentMode === 'academic') {
+                    extraParams.max_results = 5;
+                }
+
+                var body = JSON.stringify(Object.assign({
                     message: message,
                     session_id: 'user-1',
                     mode: currentMode,
                     image_data: uploadedImage ? uploadedImage.split(',')[1] : null
-                });
+                }, extraParams));
 
                 var response = await fetch(BACKEND_URL + config.endpoint, {
                     method: 'POST',
@@ -1518,6 +1609,8 @@
                 document.getElementById('weatherStatus').className = 'api-status ' + (data.features_active.weather ? 'ok' : 'warn');
                 document.getElementById('newsStatus').className = 'api-status ' + (data.features_active.news ? 'ok' : 'warn');
                 document.getElementById('ttsStatus').className = 'api-status ' + (data.features_active.tts ? 'ok' : 'warn');
+                document.getElementById('academicStatus').className = 'api-status ' + (data.features_active.sentence_transformers ? 'ok' : 'warn');
+                document.getElementById('financialStatus').className = 'api-status ok';
 
                 showToast('Backend: ' + data.status + ' | v' + data.version, '🟢');
             } catch (error) {

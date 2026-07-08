@@ -11,3 +11,4 @@ PyPDF2
 openpyxl
 faiss-cpu
 gTTS
+sentence-transformers
