@@ -1,1705 +1,2395 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse, JSONResponse
-from pydantic import BaseModel, Field
-from groq import Groq
-import os
-import io
-import sys
-import uuid
-import json
-import base64
-import requests
-import sqlite3
-import hashlib
-import time
-import re
-import math
-import random
-import string
-from datetime import datetime
-from contextlib import redirect_stdout, redirect_stderr
-from typing import Optional, List, Dict, Any, Tuple
-import traceback
+'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus AI - Your Ultimate AI Assistant</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a28;
+            --bg-card: rgba(26, 26, 40, 0.8);
+            --text-primary: #e8e8f0;
+            --text-secondary: #a0a0b8;
+            --text-muted: #6b6b8a;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-dark: #4f46e5;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --gradient-1: linear-gradient(135deg, #6366f1, #a855f7);
+            --gradient-2: linear-gradient(135deg, #a855f7, #ec4899);
+            --gradient-3: linear-gradient(135deg, #3b82f6, #06b6d4);
+        }
 
-# Data science & visualization
-try:
-    import matplotlib  # type: ignore
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt  # type: ignore
-    MATPLOTLIB_AVAILABLE = True
-except:
-    MATPLOTLIB_AVAILABLE = False
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-try:
-    import numpy as np  # type: ignore
-    import pandas as pd  # type: ignore
-    NUMPY_PANDAS_AVAILABLE = True
-except:
-    NUMPY_PANDAS_AVAILABLE = False
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
 
-from io import BytesIO
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
 
-# Document processing
-try:
-    # Try the legacy PyPDF2 package first, fall back to the pypdf package if needed
-    try:
-        import PyPDF2  # type: ignore
-    except Exception:
-        import pypdf as PyPDF2  # type: ignore
-    PYPDF_AVAILABLE = True
-except:
-    PYPDF_AVAILABLE = False
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
+        }
 
-try:
-    from openpyxl import load_workbook  # type: ignore
-    OPENPYXL_AVAILABLE = True
-except:
-    OPENPYXL_AVAILABLE = False
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            top: -100px;
+            left: -100px;
+            animation-delay: 0s;
+        }
 
-# Text-to-speech
-try:
-    try:
-        from gtts import gTTS  # type: ignore
-    except ImportError:
-        from gtts import gTTS  # type: ignore
-    GTTS_AVAILABLE = True
-except:
-    GTTS_AVAILABLE = False
+        .orb-2 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #ec4899, #f43f5e);
+            bottom: -50px;
+            right: -50px;
+            animation-delay: -5s;
+        }
 
-# FAISS for RAG
-try:
-    import faiss  # type: ignore
-    FAISS_AVAILABLE = True
-except:
-    FAISS_AVAILABLE = False
+        .orb-3 {
+            width: 250px;
+            height: 250px;
+            background: linear-gradient(135deg, #06b6d4, #3b82f6);
+            top: 50%;
+            left: 50%;
+            animation-delay: -10s;
+        }
 
-# Sentence transformers for embeddings
-try:
-    from sentence_transformers import SentenceTransformer
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-    embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-except:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
-    embedding_model = None
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(50px, -30px) scale(1.1); }
+            50% { transform: translate(-30px, 50px) scale(0.9); }
+            75% { transform: translate(20px, 20px) scale(1.05); }
+        }
 
-app = FastAPI(title="Omni AI Backend", version="3.0.0")
+        /* Glassmorphism */
+        .glass {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+        }
 
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+        /* Layout */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            height: 100vh;
+        }
 
-# ========== CONFIGURATION ==========
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
-NEWSDATA_API_KEY = os.getenv("NEWSDATA_API_KEY", "")
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
-SERPAPI_KEY = os.getenv("SERPAPI_KEY", "")
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: rgba(18, 18, 26, 0.9);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+        }
 
-# Store data
-conversations: Dict[str, List[Dict]] = {}
-generated_files: Dict[str, str] = {}
-user_memories: Dict[str, Dict] = {}
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--glass-border);
+        }
 
-# RAG document store with vector embeddings
-rag_documents: Dict[str, List[Dict]] = {}
-rag_embeddings: Dict[str, Any] = {}
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-# Initialize SQLite for persistent memory
-DB_PATH = "omni_ai_memory.db"
+        .logo i {
+            font-size: 32px;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s infinite;
+        }
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS conversations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT,
-            role TEXT,
-            content TEXT,
-            timestamp REAL,
-            mode TEXT
-        )
-    ''')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS documents (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT,
-            filename TEXT,
-            content TEXT,
-            chunks TEXT,
-            timestamp REAL
-        )
-    ''')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS generated_content (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT,
-            type TEXT,
-            content TEXT,
-            url TEXT,
-            timestamp REAL
-        )
-    ''')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS user_memories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id TEXT,
-            key TEXT,
-            value TEXT,
-            timestamp REAL
-        )
-    ''')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS academic_cache (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            query TEXT,
-            papers TEXT,
-            timestamp REAL
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+        @keyframes shimmer {
+            0% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+            100% { filter: brightness(1); }
+        }
 
-init_db()
+        .new-chat-btn {
+            width: 100%;
+            padding: 14px;
+            margin-top: 16px;
+            background: var(--gradient-1);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
 
-# ========== MODELS ==========
-class ChatRequest(BaseModel):
-    message: str
-    session_id: str = "default"
-    mode: str = "chat"
-    image_data: Optional[str] = None
+        .new-chat-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
 
-class AgentRequest(BaseModel):
-    message: str
-    session_id: str = "default"
-    tools: List[str] = Field(default_factory=lambda: ["search", "code", "weather", "news", "academic", "financial"])
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
 
-class TranslateRequest(BaseModel):
-    message: str
-    target_language: str = "en"
-    session_id: str = "default"
+        .history-item {
+            padding: 12px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 4px;
+            transition: all 0.2s ease;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
 
-class SentimentRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+        .history-item:hover, .history-item.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--text-primary);
+        }
 
-class ChartRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+        .history-item i {
+            font-size: 14px;
+            color: var(--accent-light);
+        }
 
-class WeatherRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--glass-border);
+        }
 
-class NewsRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+        .settings-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
 
-class SearchRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+        .settings-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
 
-class AcademicRequest(BaseModel):
-    message: str
-    session_id: str = "default"
-    max_results: int = 5
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
 
-class FinancialRequest(BaseModel):
-    message: str
-    session_id: str = "default"
-    symbol: Optional[str] = None
+        /* Header */
+        .header {
+            padding: 16px 24px;
+            background: rgba(18, 18, 26, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
 
-class TTSRequest(BaseModel):
-    message: str
-    lang: str = "en"
-    session_id: str = "default"
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
 
-class ImageRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
 
-class ImageSearchRequest(BaseModel):
-    message: str
-    session_id: str = "default"
-    num_results: int = 5
+        .header-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            transition: all 0.2s ease;
+        }
 
-class WebsiteRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+        .header-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--accent-light);
+            border-color: var(--accent);
+        }
 
-class AnalyzeRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+        .header-btn.active {
+            background: rgba(99, 102, 241, 0.3);
+            color: var(--accent-light);
+            border-color: var(--accent);
+        }
 
-class VideoRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+        /* Chat Area */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            scroll-behavior: smooth;
+        }
 
-class RAGQueryRequest(BaseModel):
-    message: str
-    session_id: str = "default"
+        .welcome-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100%;
+            text-align: center;
+            padding: 40px;
+        }
 
-class CreativeRequest(BaseModel):
-    message: str
-    session_id: str = "default"
-    genre: str = "story"
+        .welcome-icon {
+            font-size: 80px;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 24px;
+            animation: pulse 2s infinite;
+        }
 
-class StudyGuideRequest(BaseModel):
-    message: str
-    session_id: str = "default"
-    level: str = "intermediate"
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
 
-class DebateRequest(BaseModel):
-    message: str
-    session_id: str = "default"
-    stance: Optional[str] = None
+        .welcome-title {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #e8e8f0, #a855f7, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-class ClearRequest(BaseModel):
-    session_id: str = "default"
+        .welcome-subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            max-width: 600px;
+        }
 
-# ========== HELPER FUNCTIONS ==========
-def get_client():
-    return Groq(api_key=GROQ_API_KEY)
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            max-width: 800px;
+            width: 100%;
+        }
 
-def save_message(session_id: str, role: str, content: str, mode: str = 'chat'):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute(
-        "INSERT INTO conversations (session_id, role, content, timestamp, mode) VALUES (?, ?, ?, ?, ?)",
-        (session_id, role, content, time.time(), mode)
-    )
-    conn.commit()
-    conn.close()
+        .feature-card {
+            padding: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
 
-def get_conversation_history(session_id: str, limit: int = 20):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute(
-        "SELECT role, content FROM conversations WHERE session_id = ? ORDER BY timestamp DESC LIMIT ?",
-        (session_id, limit)
-    )
-    rows = c.fetchall()
-    conn.close()
-    return [{"role": r[0], "content": r[1]} for r in reversed(rows)]
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.2);
+        }
 
-def save_memory(session_id: str, key: str, value: str):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute(
-        "INSERT OR REPLACE INTO user_memories (session_id, key, value, timestamp) VALUES (?, ?, ?, ?)",
-        (session_id, key, value, time.time())
-    )
-    conn.commit()
-    conn.close()
+        .feature-card i {
+            font-size: 24px;
+            margin-bottom: 12px;
+            display: block;
+        }
 
-def get_memories(session_id: str) -> Dict[str, str]:
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT key, value FROM user_memories WHERE session_id = ?", (session_id,))
-    rows = c.fetchall()
-    conn.close()
-    return {r[0]: r[1] for r in rows}
+        .feature-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
 
-# ========== WEB SEARCH (Enhanced) ==========
-def web_search(query: str, num_results: int = 5) -> str:
-    """Search the web using Tavily with DuckDuckGo fallback"""
-    if TAVILY_API_KEY:
-        try:
-            url = "https://api.tavily.com/search"
-            headers = {"Content-Type": "application/json"}
-            payload = {
-                "api_key": TAVILY_API_KEY,
-                "query": query,
-                "search_depth": "basic",
-                "max_results": num_results,
-                "include_answer": True
+        .feature-card p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Messages */
+        .messages-container {
+            display: none;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .message {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            animation: messageIn 0.4s ease;
+        }
+
+        @keyframes messageIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: var(--gradient-1);
+        }
+
+        .message.ai .message-avatar {
+            background: var(--gradient-3);
+        }
+
+        .message-content {
+            flex: 1;
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 16px 20px;
+            line-height: 1.7;
+        }
+
+        .message.user .message-content {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .message-time {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .message-text {
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+        }
+
+        .message-text p {
+            margin-bottom: 12px;
+        }
+
+        .message-text p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message-text code {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--accent-light);
+        }
+
+        .message-text pre {
+            background: #0d0d15;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 12px 0;
+            position: relative;
+        }
+
+        .message-text pre code {
+            background: none;
+            padding: 0;
+            color: #e8e8f0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .copy-code-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            padding: 4px 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .copy-code-btn:hover {
+            background: rgba(99, 102, 241, 0.3);
+            color: var(--accent-light);
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .msg-action-btn {
+            padding: 6px 12px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .msg-action-btn:hover {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-light);
+            border-color: var(--accent);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            animation: messageIn 0.4s ease;
+        }
+
+        .typing-indicator.active {
+            display: flex;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+            padding: 16px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+        }
+
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .typing-dots span:nth-child(1) { animation-delay: 0s; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+        }
+
+        .typing-text {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 20px 24px;
+            background: rgba(18, 18, 26, 0.9);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .input-container {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .input-wrapper {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .input-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-action-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .input-action-btn:hover {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--accent-light);
+            border-color: var(--accent);
+        }
+
+        .input-action-btn.recording {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+            border-color: var(--error);
+            animation: pulse 1s infinite;
+        }
+
+        textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 15px;
+            font-family: 'Inter', sans-serif;
+            resize: none;
+            outline: none;
+            min-height: 24px;
+            max-height: 200px;
+            line-height: 1.5;
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--gradient-1);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .input-hints {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .hint-chip {
+            padding: 6px 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .hint-chip:hover {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-light);
+            border-color: var(--accent);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            animation: modalIn 0.3s ease;
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+            border-color: var(--error);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: 60vh;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--gradient-1);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            padding: 14px 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            animation: toastIn 0.3s ease;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .toast.success { border-color: var(--success); }
+        .toast.error { border-color: var(--error); }
+        .toast.info { border-color: var(--info); }
+        .toast.warning { border-color: var(--warning); }
+
+        .toast i {
+            font-size: 18px;
+        }
+
+        .toast.success i { color: var(--success); }
+        .toast.error i { color: var(--error); }
+        .toast.info i { color: var(--info); }
+        .toast.warning i { color: var(--warning); }
+
+        /* Image Gallery */
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .gallery-item {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.03);
+            border-color: var(--accent);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Video Creator Modal */
+        .video-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .video-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient-1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .step-content h4 {
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .step-content p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .step-output {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Mobile Menu Toggle */
+        .menu-toggle {
+            display: none;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                z-index: 100;
+                transform: translateX(-100%);
             }
 
-            resp = requests.post(url, headers=headers, json=payload, timeout=10)
-            data = resp.json()
+            .sidebar.open {
+                transform: translateX(0);
+            }
 
-            answer = data.get("answer", "")
-            output = f"\n**Web Search Results for '{query}':**\n"
+            .menu-toggle {
+                display: flex;
+            }
 
-            if answer:
-                output += f"\n**Quick Answer:** {answer}\n"
+            .welcome-title {
+                font-size: 28px;
+            }
 
-            for i, result in enumerate(data.get("results", [])[:num_results], 1):
-                title = result.get("title", "No title")
-                content = result.get("content", "")
-                url_link = result.get("url", "")
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
 
-                output += f"\n{i}. **{title}**\n"
-                if content:
-                    output += f"   {content[:300]}{'...' if len(content) > 300 else ''}\n"
-                if url_link:
-                    output += f"   {url_link}\n"
+            .header-actions {
+                display: none;
+            }
+        }
 
-            return output
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
 
-        except Exception as e:
-            pass
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
 
-    # DuckDuckGo fallback
-    try:
-        url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(query)}"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        resp = requests.get(url, headers=headers, timeout=10)
+        ::-webkit-scrollbar-thumb {
+            background: var(--glass-border);
+            border-radius: 3px;
+        }
 
-        titles = re.findall(r'<a[^>]+class="result__a"[^>]*>(.*?)</a>', resp.text)
-        snippets = re.findall(r'<a[^>]+class="result__snippet"[^>]*>(.*?)</a>', resp.text)
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
 
-        output = f"\n**Web Search Results for '{query}':**\n"
-        for i in range(min(num_results, len(titles))):
-            title = re.sub(r'<[^>]+>', '', titles[i])
-            snippet = re.sub(r'<[^>]+>', '', snippets[i]) if i < len(snippets) else ""
-            output += f"\n{i+1}. **{title}**\n   {snippet}\n"
+        /* Markdown-like styling */
+        .message-text h1, .message-text h2, .message-text h3 {
+            margin: 16px 0 8px 0;
+            color: var(--text-primary);
+        }
 
-        return output if titles else f"\nSearched for '{query}'. No results found.\n"
+        .message-text h1 { font-size: 20px; }
+        .message-text h2 { font-size: 18px; }
+        .message-text h3 { font-size: 16px; }
 
-    except Exception as e:
-        return f"\nWeb search unavailable. Add TAVILY_API_KEY for better search.\n"
+        .message-text ul, .message-text ol {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
 
-# ========== ACADEMIC SEARCH ==========
-def search_academic(query: str, max_results: int = 5) -> str:
-    """Search academic papers using arXiv and Semantic Scholar"""
-    results = []
-    
-    # Try arXiv first
-    try:
-        arxiv_url = f"http://export.arxiv.org/api/query?search_query=all:{requests.utils.quote(query)}&start=0&max_results={max_results}&sortBy=relevance&sortOrder=descending"
-        resp = requests.get(arxiv_url, timeout=15)
-        
-        entries = re.findall(r'<entry>(.*?)</entry>', resp.text, re.DOTALL)
-        for entry in entries[:max_results]:
-            title = re.search(r'<title>(.*?)</title>', entry, re.DOTALL)
-            summary = re.search(r'<summary>(.*?)</summary>', entry, re.DOTALL)
-            authors = re.findall(r'<name>(.*?)</name>', entry)
-            pdf_link = re.search(r'<link[^>]*title="pdf"[^>]*href="([^"]*)"', entry)
+        .message-text li {
+            margin: 4px 0;
+        }
+
+        .message-text blockquote {
+            border-left: 3px solid var(--accent);
+            padding-left: 16px;
+            margin: 12px 0;
+            color: var(--text-muted);
+        }
+
+        .message-text table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 13px;
+        }
+
+        .message-text th, .message-text td {
+            padding: 8px 12px;
+            border: 1px solid var(--glass-border);
+            text-align: left;
+        }
+
+        .message-text th {
+            background: rgba(99, 102, 241, 0.1);
+            font-weight: 600;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--glass-border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Agent mode badge */
+        .agent-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid var(--success);
+            border-radius: 20px;
+            font-size: 11px;
+            color: var(--success);
+            margin-left: 8px;
+        }
+
+        .agent-badge i {
+            font-size: 10px;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* File upload preview */
+        .file-preview {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .file-preview i {
+            color: var(--accent-light);
+        }
+
+        .file-preview .remove-file {
+            margin-left: auto;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        .file-preview .remove-file:hover {
+            color: var(--error);
+        }
+
+        /* Drag and drop zone */
+        .drop-zone {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(99, 102, 241, 0.1);
+            border: 2px dashed var(--accent);
+            border-radius: 20px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 10;
+        }
+
+        .drop-zone.active {
+            display: flex;
+        }
+
+        .drop-zone i {
+            font-size: 48px;
+            color: var(--accent);
+        }
+
+        .drop-zone p {
+            font-size: 16px;
+            color: var(--accent-light);
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="bg-animation">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- App Container -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-robot"></i>
+                    <span>Nexus AI</span>
+                </div>
+                <button class="new-chat-btn" onclick="startNewChat()">
+                    <i class="fas fa-plus"></i>
+                    New Chat
+                </button>
+            </div>
+            <div class="chat-history" id="chatHistory">
+                <!-- Chat history items will be added here -->
+            </div>
+            <div class="sidebar-footer">
+                <button class="settings-btn" onclick="openSettings()">
+                    <i class="fas fa-cog"></i>
+                    Settings & API Keys
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div class="header-title" id="headerTitle">Nexus AI</div>
+                </div>
+                <div class="header-actions">
+                    <button class="header-btn" id="agentBtn" onclick="toggleAgentMode()">
+                        <i class="fas fa-brain"></i>
+                        Agent Mode
+                    </button>
+                    <button class="header-btn" onclick="openVideoCreator()">
+                        <i class="fas fa-video"></i>
+                        Video Creator
+                    </button>
+                    <button class="header-btn" onclick="clearChat()">
+                        <i class="fas fa-trash"></i>
+                        Clear
+                    </button>
+                </div>
+            </header>
+
+            <!-- Chat Area -->
+            <div class="chat-area" id="chatArea">
+                <!-- Welcome Screen -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-icon">
+                        <i class="fas fa-sparkles"></i>
+                    </div>
+                    <h1 class="welcome-title">How can I help you today?</h1>
+                    <p class="welcome-subtitle">
+                        I can chat, write code, build websites, analyze data, generate images, 
+                        create videos, search the web, and much more. Just ask me anything!
+                    </p>
+                    <div class="feature-grid">
+                        <div class="feature-card" onclick="sendQuickPrompt('Explain quantum physics in simple terms')">
+                            <i class="fas fa-comments" style="color: #6366f1;"></i>
+                            <h3>Chat & Explain</h3>
+                            <p>Ask anything and get detailed answers</p>
+                        </div>
+                        <div class="feature-card" onclick="sendQuickPrompt('Write a Python script to calculate fibonacci numbers')">
+                            <i class="fas fa-code" style="color: #22c55e;"></i>
+                            <h3>Write Code</h3>
+                            <p>Generate code in any programming language</p>
+                        </div>
+                        <div class="feature-card" onclick="sendQuickPrompt('Create a portfolio website for a photographer')">
+                            <i class="fas fa-globe" style="color: #3b82f6;"></i>
+                            <h3>Build Websites</h3>
+                            <p>Generate complete HTML/CSS/JS websites</p>
+                        </div>
+                        <div class="feature-card" onclick="sendQuickPrompt('Generate an image of a futuristic city at sunset')">
+                            <i class="fas fa-image" style="color: #a855f7;"></i>
+                            <h3>Create Images</h3>
+                            <p>Generate AI images from text descriptions</p>
+                        </div>
+                        <div class="feature-card" onclick="sendQuickPrompt('Create a YouTube video about AI technology with script and thumbnail')">
+                            <i class="fas fa-video" style="color: #ec4899;"></i>
+                            <h3>Video Creator</h3>
+                            <p>Scripts, thumbnails & video prompts</p>
+                        </div>
+                        <div class="feature-card" onclick="sendQuickPrompt('Search the web for latest AI news and summarize')">
+                            <i class="fas fa-search" style="color: #f59e0b;"></i>
+                            <h3>Web Search</h3>
+                            <p>Real-time information from the internet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Container -->
+                <div class="messages-container" id="messagesContainer"></div>
+
+                <!-- Typing Indicator -->
+                <div class="typing-indicator" id="typingIndicator">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        <div class="typing-text" id="typingText">Nexus is thinking...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <div class="input-container">
+                    <div id="filePreview" style="margin-bottom: 8px;"></div>
+                    <div class="input-wrapper" id="inputWrapper">
+                        <div class="drop-zone" id="dropZone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Drop files here to upload</p>
+                        </div>
+                        <div class="input-actions">
+                            <button class="input-action-btn" onclick="document.getElementById('fileInput').click()" title="Upload file">
+                                <i class="fas fa-paperclip"></i>
+                            </button>
+                            <input type="file" id="fileInput" style="display: none;" onchange="handleFileUpload(event)" accept=".txt,.pdf,.csv,.json,.png,.jpg,.jpeg,.webp">
+                            <button class="input-action-btn" id="voiceBtn" onclick="toggleVoiceInput()" title="Voice input">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                            <button class="input-action-btn" onclick="sendQuickPrompt('Generate an image of ')" title="Generate image">
+                                <i class="fas fa-image"></i>
+                            </button>
+                        </div>
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="Message Nexus AI... (Shift+Enter for new line)"
+                            rows="1"
+                            oninput="autoResize(this)"
+                            onkeydown="handleKeyDown(event)"
+                        ></textarea>
+                        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="input-hints">
+                        <span class="hint-chip" onclick="sendQuickPrompt('Create a complete website for a coffee shop')">☕ Build a website</span>
+                        <span class="hint-chip" onclick="sendQuickPrompt('Write a Python data analysis script')">🐍 Python code</span>
+                        <span class="hint-chip" onclick="sendQuickPrompt('Generate a professional logo SVG')">🎨 Create logo</span>
+                        <span class="hint-chip" onclick="sendQuickPrompt('Analyze this data and create charts')">📊 Data analysis</span>
+                        <span class="hint-chip" onclick="sendQuickPrompt('Create a YouTube video script about AI')">🎬 Video script</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">⚙️ Settings & API Keys</div>
+                <button class="modal-close" onclick="closeSettings()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">🤖 Groq API Key (Required for Chat)</label>
+                    <input type="password" class="form-input" id="groqKey" placeholder="gsk_...">
+                    <p class="form-hint">Get your free key from <a href="https://console.groq.com" target="_blank" style="color: var(--accent-light);">console.groq.com</a>. Free tier: 1,500 requests/day!</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">🔍 Tavily API Key (Optional - Web Search)</label>
+                    <input type="password" class="form-input" id="tavilyKey" placeholder="tvly-...">
+                    <p class="form-hint">Get from <a href="https://tavily.com" target="_blank" style="color: var(--accent-light);">tavily.com</a> - 1,000 free searches/month</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">🌤️ OpenWeather API Key (Optional - Weather)</label>
+                    <input type="password" class="form-input" id="weatherKey" placeholder="...">
+                    <p class="form-hint">Get from <a href="https://openweathermap.org/api" target="_blank" style="color: var(--accent-light);">openweathermap.org</a> - Free tier available</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">📰 NewsData API Key (Optional - News)</label>
+                    <input type="password" class="form-input" id="newsKey" placeholder="...">
+                    <p class="form-hint">Get from <a href="https://newsdata.io" target="_blank" style="color: var(--accent-light);">newsdata.io</a> - Free tier available</p>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">🤗 Hugging Face Token (Optional - Advanced Models)</label>
+                    <input type="password" class="form-input" id="hfKey" placeholder="hf_...">
+                    <p class="form-hint">Get from <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: var(--accent-light);">huggingface.co</a></p>
+                </div>
+                <button class="save-btn" onclick="saveSettings()">
+                    <i class="fas fa-save"></i> Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Creator Modal -->
+    <div class="modal-overlay" id="videoModal">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <div class="modal-title">🎬 AI Video Creator</div>
+                <button class="modal-close" onclick="closeVideoModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Video Topic</label>
+                    <input type="text" class="form-input" id="videoTopic" placeholder="e.g., 'The Future of AI in 2026'">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Video Style</label>
+                    <select class="form-input" id="videoStyle">
+                        <option value="educational">Educational / Explainer</option>
+                        <option value="entertainment">Entertainment / Fun</option>
+                        <option value="tutorial">Tutorial / How-To</option>
+                        <option value="news">News / Commentary</option>
+                        <option value="story">Storytelling / Narrative</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Target Duration</label>
+                    <select class="form-input" id="videoDuration">
+                        <option value="short">Short (1-3 min) - YouTube Shorts/TikTok</option>
+                        <option value="medium" selected>Medium (5-10 min) - Standard YouTube</option>
+                        <option value="long">Long (15-30 min) - Deep Dive</option>
+                    </select>
+                </div>
+                <button class="save-btn" onclick="generateVideoContent()">
+                    <i class="fas fa-magic"></i> Generate Complete Video Package
+                </button>
+
+                <div id="videoOutput" style="margin-top: 24px; display: none;">
+                    <h3 style="margin-bottom: 16px; font-size: 18px;">📦 Your Video Package</h3>
+                    <div class="video-steps" id="videoSteps"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+
+// ==================== STATE MANAGEMENT ====================
+        const state = {
+            messages: [],
+            chatHistory: JSON.parse(localStorage.getItem('nexus_chat_history') || '[]'),
+            currentChatId: null,
+            agentMode: false,
+            uploadedFile: null,
+            isRecording: false,
+            recognition: null,
+            settings: JSON.parse(localStorage.getItem('nexus_settings') || '{}')
+        };
+
+        // Load settings
+        if (state.settings.groqKey) document.getElementById('groqKey').value = state.settings.groqKey;
+        if (state.settings.tavilyKey) document.getElementById('tavilyKey').value = state.settings.tavilyKey;
+        if (state.settings.weatherKey) document.getElementById('weatherKey').value = state.settings.weatherKey;
+        if (state.settings.newsKey) document.getElementById('newsKey').value = state.settings.newsKey;
+        if (state.settings.hfKey) document.getElementById('hfKey').value = state.settings.hfKey;
+
+        // ==================== UI FUNCTIONS ====================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icons = { success: 'check-circle', error: 'exclamation-circle', info: 'info-circle', warning: 'exclamation-triangle' };
+            toast.innerHTML = `<i class="fas fa-${icons[type]}"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        function autoResize(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // ==================== CHAT MANAGEMENT ====================
+        function startNewChat() {
+            state.messages = [];
+            state.currentChatId = null;
+            state.uploadedFile = null;
+            document.getElementById('messagesContainer').innerHTML = '';
+            document.getElementById('messagesContainer').style.display = 'none';
+            document.getElementById('welcomeScreen').style.display = 'flex';
+            document.getElementById('headerTitle').textContent = 'Nexus AI';
+            document.getElementById('filePreview').innerHTML = '';
+            document.getElementById('messageInput').value = '';
+            document.getElementById('messageInput').style.height = 'auto';
+            showToast('New chat started!', 'success');
+        }
+
+        function clearChat() {
+            if (state.messages.length === 0) return;
+            if (confirm('Clear all messages in this chat?')) {
+                state.messages = [];
+                document.getElementById('messagesContainer').innerHTML = '';
+                showToast('Chat cleared', 'info');
+            }
+        }
+
+        function saveChatToHistory() {
+            if (state.messages.length === 0) return;
+            const firstUserMsg = state.messages.find(m => m.role === 'user');
+            const title = firstUserMsg ? firstUserMsg.content.substring(0, 40) + '...' : 'New Chat';
+            const chat = {
+                id: state.currentChatId || Date.now().toString(),
+                title: title,
+                timestamp: Date.now(),
+                messages: [...state.messages]
+            };
+            state.currentChatId = chat.id;
+            const existingIndex = state.chatHistory.findIndex(c => c.id === chat.id);
+            if (existingIndex >= 0) {
+                state.chatHistory[existingIndex] = chat;
+            } else {
+                state.chatHistory.unshift(chat);
+            }
+            if (state.chatHistory.length > 50) state.chatHistory.pop();
+            localStorage.setItem('nexus_chat_history', JSON.stringify(state.chatHistory));
+            renderChatHistory();
+        }
+
+        function renderChatHistory() {
+            const container = document.getElementById('chatHistory');
+            container.innerHTML = state.chatHistory.map(chat => `
+                <div class="history-item ${chat.id === state.currentChatId ? 'active' : ''}" onclick="loadChat('${chat.id}')">
+                    <i class="fas fa-comment"></i>
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${chat.title}</span>
+                </div>
+            `).join('');
+        }
+
+        function loadChat(chatId) {
+            const chat = state.chatHistory.find(c => c.id === chatId);
+            if (!chat) return;
+            state.messages = [...chat.messages];
+            state.currentChatId = chatId;
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('messagesContainer').style.display = 'block';
+            document.getElementById('messagesContainer').innerHTML = '';
+            state.messages.forEach(msg => renderMessage(msg));
+            document.getElementById('headerTitle').textContent = chat.title;
+            renderChatHistory();
+            scrollToBottom();
+        }
+
+        // ==================== MESSAGE RENDERING ====================
+        function renderMessage(message) {
+            const container = document.getElementById('messagesContainer');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${message.role}`;
             
-            if title:
-                results.append({
-                    "source": "arXiv",
-                    "title": title.group(1).strip().replace("\n", " "),
-                    "abstract": (summary.group(1).strip()[:400] + "...") if summary else "No abstract",
-                    "authors": ", ".join(authors[:3]),
-                    "url": pdf_link.group(1) if pdf_link else ""
+            const time = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const avatar = message.role === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+            const name = message.role === 'user' ? 'You' : 'Nexus AI';
+            const agentBadge = message.agentMode ? '<span class="agent-badge"><i class="fas fa-bolt"></i>AGENT</span>' : '';
+            
+            let content = formatMessageContent(message.content);
+            
+            // Handle images
+            if (message.images && message.images.length > 0) {
+                content += '<div class="image-gallery">' + 
+                    message.images.map(img => `<div class="gallery-item"><img src="${img}" alt="Generated image"></div>`).join('') + 
+                    '</div>';
+            }
+            
+            // Handle audio
+            if (message.audioUrl) {
+                content += `<audio controls style="margin-top: 12px; width: 100%; border-radius: 8px;"><source src="${message.audioUrl}" type="audio/mpeg"></audio>`;
+            }
+            
+            msgDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <div class="message-header">
+                        ${name}${agentBadge}
+                        <span class="message-time">${time}</span>
+                    </div>
+                    <div class="message-text">${content}</div>
+                    ${message.role === 'assistant' ? `
+                    <div class="message-actions">
+                        <button class="msg-action-btn" onclick="copyMessage(this)">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                        <button class="msg-action-btn" onclick="speakText('${encodeURIComponent(message.content.replace(/'/g, "\\'"))}')">
+                            <i class="fas fa-volume-up"></i> Speak
+                        </button>
+                        <button class="msg-action-btn" onclick="regenerateMessage(${state.messages.indexOf(message)})">
+                            <i class="fas fa-redo"></i> Regenerate
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            container.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        function formatMessageContent(text) {
+            if (!text) return '';
+            
+            // Escape HTML
+            text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            // Code blocks
+            text = text.replace(/```([\w]*)([^]*?)```/g, (match, lang, code) => {
+                return `<pre><button class="copy-code-btn" onclick="copyCode(this)">Copy</button><code class="language-${lang || 'text'}">${code.trim()}</code></pre>`;
+            });
+            
+            // Inline code
+            text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            // Bold
+            text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            
+            // Italic
+            text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            
+            // Headers
+            text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            text = text.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            text = text.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+            
+            // Lists
+            text = text.replace(/^\* (.+)$/gm, '<li>$1</li>');
+            text = text.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+            text = text.replace(/<\/ul>\s*<ul>/g, '');
+            
+            // Numbered lists
+            text = text.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+            
+            // Blockquotes
+            text = text.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+            
+            // Links
+            text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: var(--accent-light); text-decoration: underline;">$1</a>');
+            
+            // Tables (simple)
+            text = text.replace(/\|(.+)\|/g, (match, content) => {
+                const cells = content.split('|').map(c => c.trim()).filter(c => c);
+                if (cells.length === 0) return match;
+                return '<tr>' + cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
+            });
+            
+            // Paragraphs
+            text = text.split('\n\n').map(p => {
+                p = p.trim();
+                if (!p || p.startsWith('<')) return p;
+                return `<p>${p}</p>`;
+            }).join('\n');
+            
+            // Line breaks
+            text = text.replace(/\n/g, '<br>');
+            
+            return text;
+        }
+
+        function scrollToBottom() {
+            const chatArea = document.getElementById('chatArea');
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // ==================== SEND MESSAGE ====================
+        function sendQuickPrompt(prompt) {
+            document.getElementById('messageInput').value = prompt;
+            autoResize(document.getElementById('messageInput'));
+            sendMessage();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            if (!content && !state.uploadedFile) return;
+            
+            const groqKey = state.settings.groqKey;
+            if (!groqKey) {
+                showToast('Please add your Groq API key in Settings first!', 'warning');
+                openSettings();
+                return;
+            }
+            
+            // Hide welcome screen
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.getElementById('messagesContainer').style.display = 'block';
+            
+            // Build user message content
+            let userContent = content;
+            if (state.uploadedFile) {
+                userContent = `[File: ${state.uploadedFile.name}]\\n${content}`;
+            }
+            
+            // Add user message
+            const userMsg = {
+                role: 'user',
+                content: userContent,
+                timestamp: Date.now()
+            };
+            state.messages.push(userMsg);
+            renderMessage(userMsg);
+            
+            // Clear input
+            input.value = '';
+            input.style.height = 'auto';
+            document.getElementById('filePreview').innerHTML = '';
+            state.uploadedFile = null;
+            
+            // Show typing indicator
+            const typingIndicator = document.getElementById('typingIndicator');
+            const typingText = document.getElementById('typingText');
+            typingIndicator.classList.add('active');
+            
+            // Determine what to do based on message content
+            try {
+                let response;
+                
+                if (content.toLowerCase().includes('generate an image') || content.toLowerCase().includes('create an image')) {
+                    typingText.textContent = 'Nexus is generating images...';
+                    response = await generateImage(content);
+                } else if (content.toLowerCase().includes('weather')) {
+                    typingText.textContent = 'Nexus is checking the weather...';
+                    response = await getWeather(content);
+                } else if (content.toLowerCase().includes('news')) {
+                    typingText.textContent = 'Nexus is fetching news...';
+                    response = await getNews(content);
+                } else if (content.toLowerCase().includes('search') || content.toLowerCase().includes('look up') || content.toLowerCase().includes('find')) {
+                    typingText.textContent = 'Nexus is searching the web...';
+                    response = await webSearch(content);
+                } else if (state.agentMode) {
+                    typingText.textContent = 'Nexus Agent is reasoning...';
+                    response = await agentModeResponse(content, groqKey);
+                } else {
+                    typingText.textContent = 'Nexus is thinking...';
+                    response = await chatWithGroq(content, groqKey);
+                }
+                
+                typingIndicator.classList.remove('active');
+                
+                const aiMsg = {
+                    role: 'assistant',
+                    content: response.text,
+                    timestamp: Date.now(),
+                    agentMode: state.agentMode,
+                    images: response.images || null,
+                    audioUrl: response.audioUrl || null
+                };
+                state.messages.push(aiMsg);
+                renderMessage(aiMsg);
+                saveChatToHistory();
+                
+            } catch (error) {
+                typingIndicator.classList.remove('active');
+                showToast('Error: ' + error.message, 'error');
+                console.error(error);
+            }
+        }
+
+        // ==================== API INTEGRATIONS ====================
+        async function chatWithGroq(content, apiKey) {
+            const systemPrompt = `You are Nexus AI, a powerful, friendly, and knowledgeable AI assistant. You can help with:
+- Answering questions on any topic (science, history, tech, culture, etc.)
+- Writing and debugging code in any programming language
+- Creating complete websites with HTML, CSS, and JavaScript
+- Data analysis and visualization
+- Creative writing and brainstorming
+- Math problems with step-by-step solutions
+- Translation between languages
+- Summarizing documents
+- Travel planning, recipes, fitness routines
+- Study guides and academic explanations
+
+Always provide detailed, accurate, and helpful responses. When writing code, include complete, working examples. When explaining concepts, use clear language and examples. Format your responses with markdown for readability.`;
+
+            const messages = [
+                { role: 'system', content: systemPrompt },
+                ...state.messages.slice(-10).map(m => ({ role: m.role, content: m.content }))
+            ];
+            
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'llama-3.3-70b-versatile',
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 4096
                 })
-    except Exception as e:
-        pass
-    
-    # Try Semantic Scholar
-    try:
-        ss_url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={requests.utils.quote(query)}&fields=title,abstract,authors,year,url&limit={max_results}"
-        resp = requests.get(ss_url, timeout=10)
-        data = resp.json()
-        
-        for paper in data.get("data", [])[:max_results]:
-            authors = [a.get("name", "") for a in paper.get("authors", [])[:3]]
-            results.append({
-                "source": "Semantic Scholar",
-                "title": paper.get("title", "No title"),
-                "abstract": (paper.get("abstract", "")[:400] + "...") if paper.get("abstract") else "No abstract",
-                "authors": ", ".join(authors),
-                "year": paper.get("year", ""),
-                "url": paper.get("url", "")
-            })
-    except Exception as e:
-        pass
-    
-    if not results:
-        return f"\nNo academic papers found for '{query}'. Try a more specific query.\n"
-    
-    output = f"\n**Academic Papers on '{query}':**\n"
-    for i, paper in enumerate(results[:max_results], 1):
-        output += f"\n{i}. **{paper['title']}** ({paper['source']})\n"
-        output += f"   Authors: {paper['authors']}\n"
-        if paper.get("year"):
-            output += f"   Year: {paper['year']}\n"
-        output += f"   {paper['abstract']}\n"
-        if paper.get("url"):
-            output += f"   [Read more]({paper['url']})\n"
-    
-    return output
-
-# ========== FINANCIAL DATA ==========
-def get_financial_data(symbol: str, data_type: str = "quote") -> str:
-    """Get financial data using Yahoo Finance (free)"""
-    try:
-        if data_type == "quote":
-            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=1mo"
-            resp = requests.get(url, timeout=10)
-            data = resp.json()
+            });
             
-            result = data.get("chart", {}).get("result", [{}])[0]
-            meta = result.get("meta", {})
-            
-            price = meta.get("regularMarketPrice", "N/A")
-            prev_close = meta.get("previousClose", "N/A")
-            currency = meta.get("currency", "USD")
-            
-            change = ""
-            if price != 'N/A' and prev_close != 'N/A':
-                try:
-                    change_pct = ((float(price) - float(prev_close)) / float(prev_close)) * 100
-                    change = f" ({change_pct:+.2f}%)"
-                except:
-                    pass
-            
-            return f"**{symbol.upper()}**\nCurrent Price: {price} {currency}{change}\nPrevious Close: {prev_close} {currency}"
-        
-        elif data_type == "history":
-            url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1d&range=6mo"
-            resp = requests.get(url, timeout=10)
-            data = resp.json()
-            
-            result = data.get("chart", {}).get("result", [{}])[0]
-            timestamps = result.get("timestamp", [])
-            prices = result.get("indicators", {}).get("quote", [{}])[0].get("close", [])
-            
-            if timestamps and prices:
-                latest = prices[-1]
-                earliest = prices[0]
-                try:
-                    change = ((latest - earliest) / earliest) * 100
-                    return f"**{symbol.upper()} - 6 Month Performance**\nStart: {earliest:.2f} | End: {latest:.2f} | Change: {change:+.2f}%"
-                except:
-                    pass
-            
-    except Exception as e:
-        return f"Financial data fetch failed for {symbol}: {str(e)}"
-    
-    return f"No data found for {symbol}"
-
-# ========== WEATHER ==========
-def get_weather(city: str) -> str:
-    """Get weather data from OpenWeatherMap"""
-    if not OPENWEATHER_API_KEY:
-        return "Weather API not configured. Add OPENWEATHER_API_KEY."
-    try:
-        url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={OPENWEATHER_API_KEY}&units=metric"
-        resp = requests.get(url, timeout=10)
-        data = resp.json()
-        if data.get("cod") != 200:
-            return f"Weather error: {data.get('message', 'Unknown error')}"
-
-        temp = data["main"]["temp"]
-        feels_like = data["main"]["feels_like"]
-        humidity = data["main"]["humidity"]
-        desc = data["weather"][0]["description"]
-        wind = data["wind"]["speed"]
-        pressure = data["main"]["pressure"]
-        visibility = data.get("visibility", 0) / 1000
-
-        return f"""**Weather in {city.title()}**
-🌡️ Temperature: {temp}°C (feels like {feels_like}°C)
-💧 Humidity: {humidity}%
-☁️ Conditions: {desc.title()}
-💨 Wind: {wind} m/s
-📊 Pressure: {pressure} hPa
-👁️ Visibility: {visibility:.1f} km"""
-    except Exception as e:
-        return f"Weather fetch failed: {str(e)}"
-
-# ========== NEWS ==========
-def get_news(query: str = "technology", num: int = 5) -> str:
-    """Get news from NewsData.io with fallback to web search"""
-    if NEWSDATA_API_KEY:
-        try:
-            url = f"https://newsdata.io/api/1/latest?apikey={NEWSDATA_API_KEY}&q={requests.utils.quote(query)}&language=en&size={num}"
-            resp = requests.get(url, timeout=10)
-            data = resp.json()
-
-            if data.get("status") == "success":
-                articles = data.get("results", [])
-                output = f'\n**Latest News on "{query}":**\n'
-
-                for i, art in enumerate(articles[:num], 1):
-                    title = art.get("title", "No title")
-                    desc = art.get("description", "") or art.get("content", "")[:200]
-                    link = art.get("link", "")
-                    source = art.get("source_id", "Unknown")
-                    pub_date = art.get("pubDate", "")
-
-                    output += f"\n{i}. **{title}**\n"
-                    if desc:
-                        output += f"   {desc}\n"
-                    if link:
-                        output += f"   {link}\n"
-                    output += f"   📰 {source}"
-                    if pub_date:
-                        output += f" | {pub_date}"
-                    output += "\n"
-
-                return output
-        except Exception as e:
-            pass
-    
-    # Fallback to web search for news
-    return web_search(f"latest news {query}", num_results=num)
-
-# ========== IMAGE GENERATION ==========
-def generate_image(prompt: str, width: int = 1024, height: int = 768) -> str:
-    """Generate image using Pollinations.ai (free)"""
-    clean = requests.utils.quote(prompt[:400])
-    return f"https://image.pollinations.ai/prompt/{clean}?width={width}&height={height}&nologo=true&seed={int(time.time())}&enhance=true"
-
-# ========== IMAGE SEARCH ==========
-def search_images(query: str, num: int = 5) -> List[str]:
-    """Search for images online using DuckDuckGo image search"""
-    try:
-        url = f"https://duckduckgo.com/?q={requests.utils.quote(query)}&iax=images&ia=images"
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-        resp = requests.get(url, headers=headers, timeout=10)
-        
-        image_urls = re.findall(r'https://[^"\s]+\.(?:jpg|jpeg|png|gif|webp)', resp.text)
-        return list(set(image_urls))[:num]
-    except:
-        return []
-
-# ========== CHART GENERATION ==========
-def generate_chart(chart_type: str, data: dict, title: str = "Chart") -> str:
-    """Generate matplotlib chart and return base64"""
-    try:
-        plt.style.use('dark_background')
-        fig, ax = plt.subplots(figsize=(10, 6))
-        fig.patch.set_facecolor('#0a0a12')
-        ax.set_facecolor('#12121c')
-
-        if chart_type == "bar":
-            bars = ax.bar(data.get("labels", []), data.get("values", []), color="#6366f1", edgecolor="#818cf8", linewidth=1.5)
-            for bar in bars:
-                bar.set_alpha(0.85)
-        elif chart_type == "line":
-            ax.plot(data.get("labels", []), data.get("values", []), marker="o", color="#6366f1", linewidth=2.5, markersize=8)
-            ax.fill_between(range(len(data.get("values", []))), data.get("values", []), alpha=0.15, color="#6366f1")
-        elif chart_type == "pie":
-            colors = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"]
-            wedges, texts, autotexts = ax.pie(data.get("values", []), labels=data.get("labels", []), autopct="%1.1f%%",
-                                              colors=colors[:len(data.get('values', []))], startangle=90)
-            for autotext in autotexts:
-                autotext.set_color('white')
-                autotext.set_fontweight('bold')
-        elif chart_type == "scatter":
-            ax.scatter(data.get("x", []), data.get("y", []), color="#6366f1", alpha=0.7, s=80, edgecolors="#818cf8", linewidths=1)
-        elif chart_type == "histogram":
-            ax.hist(data.get("values", []), bins=data.get("bins", 10), color="#6366f1", alpha=0.7, edgecolor="#818cf8")
-        elif chart_type == "area":
-            ax.fill_between(data.get("labels", []), data.get("values", []), alpha=0.3, color="#6366f1")
-            ax.plot(data.get("labels", []), data.get("values", []), color="#6366f1", linewidth=2)
-
-        ax.set_title(title, fontsize=16, fontweight='bold', color='white', pad=15)
-        ax.set_xlabel(data.get('xlabel', ''), color='#94a3b8', fontsize=11)
-        ax.set_ylabel(data.get('ylabel', ''), color='#94a3b8', fontsize=11)
-        ax.tick_params(colors='#94a3b8', labelsize=10)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_color('#232335')
-        ax.spines['bottom'].set_color('#232335')
-        ax.grid(True, alpha=0.1, color='white')
-
-        plt.tight_layout()
-        buf = BytesIO()
-        plt.savefig(buf, format="png", dpi=120, bbox_inches="tight", facecolor="#0a0a12")
-        plt.close()
-        buf.seek(0)
-        img_base64 = base64.b64encode(buf.read()).decode()
-        return f"data:image/png;base64,{img_base64}"
-    except Exception as e:
-        return f"Error generating chart: {str(e)}"
-
-# ========== TEXT TO SPEECH ==========
-def text_to_speech(text: str, lang: str = "en") -> str:
-    """Convert text to speech, return base64 audio"""
-    if not GTTS_AVAILABLE:
-        return None
-    try:
-        tts = gTTS(text=text[:500], lang=lang, slow=False)
-        buf = BytesIO()
-        tts.write_to_fp(buf)
-        buf.seek(0)
-        audio_b64 = base64.b64encode(buf.read()).decode()
-        return f"data:audio/mp3;base64,{audio_b64}"
-    except Exception as e:
-        return None
-
-# ========== FILE EXTRACTION ==========
-def extract_text_from_file(content: bytes, filename: str) -> str:
-    """Extract text from various file types"""
-    ext = filename.lower().split(".")[-1] if "." in filename else ""
-
-    if ext in ["txt", "md", "csv", "json", "py", "js", "html", "css"]:
-        return content.decode("utf-8", errors="ignore")
-
-    elif ext == "pdf" and PYPDF_AVAILABLE:
-        try:
-            reader = PyPDF2.PdfReader(BytesIO(content))
-            text = ''
-            for page in reader.pages:
-                text += page.extract_text() or ''
-            return text
-        except:
-            return "Error reading PDF"
-
-    elif ext in ["xlsx", "xls"] and OPENPYXL_AVAILABLE:
-        try:
-            wb = load_workbook(BytesIO(content))
-            text = ''
-            for sheet in wb.sheetnames:
-                ws = wb[sheet]
-                text += f"\n--- Sheet: {sheet} ---\n"
-                for row in ws.iter_rows(values_only=True):
-                    text += " | ".join(str(c) if c else "" for c in row) + "\n"
-            return text
-        except:
-            return "Error reading Excel file"
-
-    return content.decode("utf-8", errors="ignore")[:10000]
-
-# ========== RAG WITH EMBEDDINGS ==========
-def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
-    """Split text into overlapping chunks"""
-    words = text.split()
-    chunks = []
-    for i in range(0, len(words), chunk_size - overlap):
-        chunk = " ".join(words[i:i + chunk_size])
-        if chunk:
-            chunks.append(chunk)
-    return chunks
-
-def create_rag_index(session_id: str, documents: List[Dict]):
-    """Create FAISS index for RAG"""
-    if not FAISS_AVAILABLE or not SENTENCE_TRANSFORMERS_AVAILABLE:
-        return
-    
-    all_chunks = []
-    chunk_metadata = []
-    
-    for doc in documents:
-        chunks = chunk_text(doc['content'])
-        for i, chunk in enumerate(chunks):
-            all_chunks.append(chunk)
-            chunk_metadata.append({"filename": doc["filename"], "chunk_index": i})
-    
-    if not all_chunks:
-        return
-    
-    embeddings = embedding_model.encode(all_chunks)
-    dimension = embeddings.shape[1]
-    
-    index = faiss.IndexFlatL2(dimension)
-    index.add(np.array(embeddings).astype('float32'))
-    
-    rag_embeddings[session_id] = {
-        "index": index,
-        "chunks": all_chunks,
-        "metadata": chunk_metadata
-    }
-
-def search_rag(session_id: str, query: str, top_k: int = 5) -> List[Tuple[str, str]]:
-    """Search RAG index for relevant chunks"""
-    if session_id not in rag_embeddings or not SENTENCE_TRANSFORMERS_AVAILABLE:
-        return []
-    
-    query_embedding = embedding_model.encode([query])
-    index_data = rag_embeddings[session_id]
-    
-    distances, indices = index_data['index'].search(
-        np.array(query_embedding).astype('float32'), top_k
-    )
-    
-    results = []
-    for idx in indices[0]:
-        if idx < len(index_data['chunks']):
-            chunk = index_data['chunks'][idx]
-            meta = index_data['metadata'][idx]
-            results.append((meta["filename"], chunk))
-    
-    return results
-
-# ========== SYSTEM PROMPTS (Enhanced) ==========
-SYSTEM_PROMPTS = {
-    "chat": "You are Omni AI, a super-intelligent assistant with access to tools, vision, code execution, web search, image generation, data analysis, academic research, financial data, and more. Be helpful, concise, accurate, and engaging. When uncertain, say so. Always cite sources when using web search or academic data.",
-    "code": "You are an expert programmer. Write clean, efficient, well-documented code. Always include error handling. Explain complex logic with comments. Follow PEP 8 for Python.",
-    "vision": "You are a computer vision expert. Describe images in detail, identify objects, read text, analyze scenes, and answer questions about visual content. Be precise and thorough.",
-    "agent": "You are an AI agent that intelligently selects and uses tools. Analyze user requests, determine which tools are needed (search, code, weather, news, academic, financial, image, chart), execute them, and synthesize comprehensive responses.",
-    "analyst": "You are a data scientist. Analyze data thoroughly, identify trends, create insights, suggest visualizations, and provide actionable recommendations. Use statistical reasoning.",
-    "creative": "You are a creative writing expert. Write engaging, original stories, poems, scripts, and essays. Develop believable characters, immersive settings, and compelling plots. Adapt tone and style to the genre.",
-    "debate": "You are a skilled debater and negotiator. Present well-reasoned arguments, consider multiple perspectives, weigh pros and cons, and address counter-arguments. Be persuasive but fair.",
-    "emotional": "You are emotionally intelligent. Recognize emotions in text, empathize with users, and provide compassionate, personalized responses. Be supportive and understanding.",
-    "study": "You are an expert educator. Create clear study guides, explain complex concepts at the user level, use analogies, and provide practice questions. Adapt to beginner/intermediate/advanced levels.",
-    "research": "You are a research assistant. Synthesize information from multiple sources, provide balanced perspectives, cite sources, and identify gaps in knowledge. Be thorough and objective."
-}
-# ========== CORE ENDPOINTS ==========
-
-@app.get("/")
-async def root():
-    return {
-        "name": "Omni AI Backend v3.0",
-        "status": "Active",
-        "features": [
-            "chat", "vision", "code_execution", "website_builder",
-            "data_analysis", "file_upload", "image_generation", "image_search",
-            "web_search", "weather", "news", "agent_mode", "academic_search",
-            "financial_data", "text_to_speech", "chart_generation", "youtube_creator",
-            "translation", "sentiment_analysis", "rag_qa", "creative_writing",
-            "study_guides", "debate_negotiation", "emotional_intelligence"
-        ],
-        "models": ["llama-3.1-8b-instant", "llama-3.2-90b-vision-preview", "whisper-large-v3"],
-        "version": "3.0.0"
-    }
-
-# ========== 1. ENHANCED CHAT ==========
-@app.post("/chat")
-async def chat(request: ChatRequest):
-    session_id = request.session_id or "default"
-
-    if session_id not in conversations:
-        conversations[session_id] = [
-            {"role": "system", "content": SYSTEM_PROMPTS.get(request.mode, SYSTEM_PROMPTS["chat"])}
-        ]
-
-    if request.image_data:
-        return await vision_chat(request)
-
-    conversations[session_id].append({"role": "user", "content": request.message})
-    save_message(session_id, "user", request.message, request.mode)
-
-    # Load user memories for personalization
-    memories = get_memories(session_id)
-    memory_context = ""
-    if memories:
-        memory_context = "\nUser preferences: " + "; ".join([f"{k}: {v}" for k, v in list(memories.items())[:5]])
-
-    try:
-        client = get_client()
-        messages = conversations[session_id].copy()
-        if memory_context:
-            messages[-1]["content"] = memory_context + "\n\n" + messages[-1]["content"]
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=messages,
-            temperature=0.7,
-            max_tokens=4096
-        )
-        reply = response.choices[0].message.content
-
-        conversations[session_id].append({"role": "assistant", "content": reply})
-        save_message(session_id, "assistant", reply, request.mode)
-
-        return {"reply": reply, "mode": request.mode, "session_id": session_id}
-    except Exception as e:
-        return {"reply": f"Error: {str(e)}", "mode": request.mode}
-
-# ========== 2. VISION AI ==========
-@app.post("/vision")
-async def vision_chat(request: ChatRequest):
-    session_id = request.session_id or "default"
-
-    if not request.image_data:
-        return {"reply": "No image provided. Please upload an image."}
-
-    try:
-        client = get_client()
-
-        image_content = request.image_data
-        if image_content.startswith("data:image"):
-            image_content = image_content.split(",")[1]
-
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": request.message or "Describe this image in detail."},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_content}"}}
-                ]
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error?.message || 'Failed to get response');
             }
-        ]
-
-        response = client.chat.completions.create(
-            model="llama-3.2-90b-vision-preview",
-            messages=messages,
-            max_tokens=4096
-        )
-
-        reply = response.choices[0].message.content
-        save_message(session_id, "user", f"[Image] {request.message}", "vision")
-        save_message(session_id, "assistant", reply, "vision")
-
-        return {"reply": reply, "mode": "vision"}
-    except Exception as e:
-        return {"reply": f"Vision analysis error: {str(e)}"}
-
-# ========== 3. ENHANCED CODE EXECUTION ==========
-@app.post("/execute")
-async def execute_code(request: ChatRequest):
-    try:
-        client = get_client()
-
-        code_prompt = f"""Write only executable Python code for this request. No explanations outside code blocks:
-
-Request: {request.message}
-
-Rules:
-- Write clean, working Python code
-- Use print() to show output
-- Handle errors with try/except
-- For charts, save to buffer and print base64
-- If creating files, use simple names in /tmp/"""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": code_prompt}],
-            temperature=0.3
-        )
-
-        raw_code = response.choices[0].message.content
-
-        code = raw_code
-        if "```python" in raw_code:
-            code = raw_code.split("```python")[1].split("```")[0].strip()
-        elif "```" in raw_code:
-            code = raw_code.split("```")[1].split("```")[0].strip()
-
-        safe_globals = {
-            "__builtins__": {
-                "print": print, "len": len, "range": range,
-                "str": str, "int": int, "float": float, "bool": bool,
-                "list": list, "dict": dict, "set": set, "tuple": tuple,
-                "zip": zip, "map": map, "filter": filter, "sum": sum,
-                "min": min, "max": max, "abs": abs, "round": round,
-                "sorted": sorted, "enumerate": enumerate, "reversed": reversed,
-                "type": type, "isinstance": isinstance, "hasattr": hasattr,
-                "getattr": getattr, "setattr": setattr,
-                "Exception": Exception, "ValueError": ValueError,
-                "KeyError": KeyError, "IndexError": IndexError,
-                "ZeroDivisionError": ZeroDivisionError,
-                "open": open, "input": lambda x="": "",
-                "json": json, "os": os, "sys": sys,
-                "math": __import__("math"),
-                "random": __import__("random"),
-                "datetime": __import__("datetime"),
-                "re": __import__("re"),
-                "itertools": __import__("itertools"),
-                "collections": __import__("collections"),
-                "statistics": __import__("statistics"),
-                "hashlib": hashlib,
-                "base64": base64,
-                "io": io,
-                "requests": requests,
-                "numpy": np,
-                "pandas": pd,
-                "plt": plt,
-                "matplotlib": matplotlib,
-            },
-            "np": np, "pd": pd, "plt": plt, "matplotlib": matplotlib,
-            "BytesIO": BytesIO, "base64": base64,
+            
+            const data = await response.json();
+            return { text: data.choices[0].message.content };
         }
 
-        output_buffer = io.StringIO()
-        error_buffer = io.StringIO()
+        async function agentModeResponse(content, apiKey) {
+            // Agent mode: AI decides which tools to use
+            const agentPrompt = `You are Nexus AI in AGENT MODE. You have access to these tools:
+1. web_search - Search the internet for current information
+2. code_execution - Execute Python code for calculations and data analysis
+3. image_generation - Generate images from text descriptions
+4. weather_lookup - Get current weather for any location
+5. news_fetch - Get latest news on any topic
 
-        with redirect_stdout(output_buffer), redirect_stderr(error_buffer):
-            try:
-                exec(code, safe_globals)
-            except Exception as e:
-                print(f"Runtime Error: {type(e).__name__}: {str(e)}")
+Analyze the user's request and decide which tool(s) to use. Respond with your reasoning and the final answer. If you need to search, indicate what you searched for.`;
 
-        output = output_buffer.getvalue()
-        errors = error_buffer.getvalue()
-
-        full_output = output if output.strip() else "Code executed successfully (no output)"
-        if errors.strip():
-            full_output += f"\n\nStderr:\n{errors}"
-
-        return {
-            "reply": f"""**Code Generated & Executed!**
-
-```python
-{code}
-```
-
-**Output:**
-```
-{full_output}
-```""",
-            "code": code,
-            "output": full_output
+            const messages = [
+                { role: 'system', content: agentPrompt },
+                ...state.messages.slice(-6).map(m => ({ role: m.role, content: m.content }))
+            ];
+            
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: 'llama-3.3-70b-versatile',
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 4096
+                })
+            });
+            
+            const data = await response.json();
+            return { text: data.choices[0].message.content };
         }
-    except Exception as e:
-        return {"reply": f"Code execution error: {str(e)}"}
 
-# ========== 4. WEBSITE BUILDER ==========
-@app.post("/build-website")
-async def build_website(request: WebsiteRequest):
-    try:
-        client = get_client()
-
-        website_prompt = f"""Create a complete, self-contained HTML website based on this request.
-
-Request: {request.message}
-
-Requirements:
-- Create a single HTML file with embedded CSS and JavaScript
-- Use modern, clean design with good UX
-- Make it fully functional and interactive
-- Include all necessary styles inline
-- Use placeholder images from picsum.photos or similar if needed
-- Return ONLY the complete HTML code, no explanations
-
-Return the complete HTML code:"""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": website_prompt}],
-            temperature=0.7,
-            max_tokens=4096
-        )
-
-        html_code = response.choices[0].message.content
-
-        if "```html" in html_code:
-            html_code = html_code.split("```html")[1].split("```")[0].strip()
-        elif "```" in html_code:
-            html_code = html_code.split("```")[1].split("```")[0].strip()
-
-        file_id = str(uuid.uuid4())[:8]
-        filename = f"/tmp/website_{file_id}.html"
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(html_code)
-
-        generated_files[request.session_id] = filename
-        preview_url = f"/preview/{file_id}"
-
-        return {
-            "reply": "Website created successfully! You can download or preview it below.",
-            "code": html_code,
-            "preview_url": preview_url,
-            "file_id": file_id
+        async function generateImage(prompt) {
+            const imagePrompt = prompt.replace(/generate an image of|create an image of/gi, '').trim();
+            
+            // Use Pollinations.ai (free, no API key needed)
+            const encodedPrompt = encodeURIComponent(imagePrompt);
+            const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
+            
+            return {
+                text: `I've generated an image based on your prompt: "${imagePrompt}"\\n\\n![Generated Image](${imageUrl})\\n\\nThe image above was created using AI image generation. You can right-click to save it or use it in your projects.`,
+                images: [imageUrl]
+            };
         }
-    except Exception as e:
-        return {"reply": f"Website build error: {str(e)}"}
 
-@app.get("/preview/{file_id}")
-async def preview_website(file_id: str):
-    for sid, path in generated_files.items():
-        if file_id in path:
-            return HTMLResponse(content=open(path, "r", encoding="utf-8").read())
-    return {"error": "Website not found"}
+        async function webSearch(query) {
+            const tavilyKey = state.settings.tavilyKey;
+            
+            if (!tavilyKey) {
+                // Fallback: Use Groq to simulate search knowledge
+                const searchPrompt = `The user wants to search for: "${query}". Please provide the most accurate and up-to-date information you can about this topic. If you're uncertain about recent events, please say so.`;
+                return await chatWithGroq(searchPrompt, state.settings.groqKey);
+            }
+            
+            try {
+                const response = await fetch('https://api.tavily.com/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        api_key: tavilyKey,
+                        query: query.replace(/search|look up|find/gi, '').trim(),
+                        search_depth: 'advanced',
+                        max_results: 5
+                    })
+                });
+                
+                const data = await response.json();
+                
+                let resultText = `🔍 **Web Search Results**\\n\\n`;
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach((r, i) => {
+                        resultText += `${i + 1}. **[${r.title}](${r.url})**\\n${r.content}\\n\\n`;
+                    });
+                } else {
+                    resultText += 'No results found. Let me try to answer based on my knowledge.\\n\\n';
+                }
+                
+                // Summarize with Groq
+                const summary = await chatWithGroq(`Summarize these search results in a helpful way: ${resultText}`, state.settings.groqKey);
+                return { text: resultText + '\\n---\\n\\n**Summary:**\\n' + summary.text };
+                
+            } catch (e) {
+                return await chatWithGroq(query, state.settings.groqKey);
+            }
+        }
 
-# ========== 5. DATA ANALYSIS ==========
-@app.post("/analyze")
-async def analyze_data(request: AnalyzeRequest):
-    try:
-        client = get_client()
+        async function getWeather(query) {
+            const weatherKey = state.settings.weatherKey;
+            
+            if (!weatherKey) {
+                return { text: '⚠️ Please add your OpenWeather API key in Settings to get live weather data. You can get a free key at openweathermap.org/api\\n\\nHowever, I can tell you that to check weather, I need a city name. Please specify which city you want weather for!' };
+            }
+            
+            try {
+                const city = query.replace(/weather|in|for|get/gi, '').trim() || 'London';
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${weatherKey}&units=metric`);
+                const data = await response.json();
+                
+                if (data.cod !== 200) {
+                    throw new Error(data.message);
+                }
+                
+                const weatherText = `🌤️ **Weather in ${data.name}, ${data.sys.country}**\\n\\n` +
+                    `**Temperature:** ${Math.round(data.main.temp)}°C (feels like ${Math.round(data.main.feels_like)}°C)\\n` +
+                    `**Condition:** ${data.weather[0].description}\\n` +
+                    `**Humidity:** ${data.main.humidity}%\\n` +
+                    `**Wind:** ${data.wind.speed} m/s\\n` +
+                    `**Pressure:** ${data.main.pressure} hPa\\n\\n` +
+                    `*Data provided by OpenWeatherMap*`;
+                
+                return { text: weatherText };
+            } catch (e) {
+                return { text: `❌ Could not fetch weather: ${e.message}. Please check your API key and try again.` };
+            }
+        }
 
-        analyze_prompt = f"""Analyze the following data/text and provide insights.
+        async function getNews(query) {
+            const newsKey = state.settings.newsKey;
+            
+            if (!newsKey) {
+                return { text: '⚠️ Please add your NewsData API key in Settings to get live news. You can get a free key at newsdata.io\\n\\nI can still discuss news topics based on my training data though!' };
+            }
+            
+            try {
+                const topic = query.replace(/news|about|latest/gi, '').trim() || 'technology';
+                const response = await fetch(`https://newsdata.io/api/1/news?apikey=${newsKey}&q=${encodeURIComponent(topic)}&language=en&size=5`);
+                const data = await response.json();
+                
+                let newsText = `📰 **Latest News: ${topic}**\\n\\n`;
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach((article, i) => {
+                        newsText += `${i + 1}. **[${article.title}](${article.link})**\\n`;
+                        newsText += `${article.description || 'No description available'}\\n`;
+                        newsText += `*Source: ${article.source_id} | ${new Date(article.pubDate).toLocaleDateString()}*\\n\\n`;
+                    });
+                } else {
+                    newsText += 'No news found for this topic.';
+                }
+                
+                return { text: newsText };
+            } catch (e) {
+                return { text: `❌ Could not fetch news: ${e.message}` };
+            }
+        }
 
-Data: {request.message}
+ // ==================== VIDEO CREATOR ====================
+        function openVideoCreator() {
+            document.getElementById('videoModal').classList.add('active');
+        }
+
+        function closeVideoModal() {
+            document.getElementById('videoModal').classList.remove('active');
+            document.getElementById('videoOutput').style.display = 'none';
+            document.getElementById('videoSteps').innerHTML = '';
+            document.getElementById('videoTopic').value = '';
+        }
+
+        async function generateVideoContent() {
+            const topic = document.getElementById('videoTopic').value.trim();
+            const style = document.getElementById('videoStyle').value;
+            const duration = document.getElementById('videoDuration').value;
+            
+            if (!topic) {
+                showToast('Please enter a video topic!', 'warning');
+                return;
+            }
+            
+            const groqKey = state.settings.groqKey;
+            if (!groqKey) {
+                showToast('Please add your Groq API key first!', 'warning');
+                openSettings();
+                return;
+            }
+            
+            const outputDiv = document.getElementById('videoOutput');
+            const stepsDiv = document.getElementById('videoSteps');
+            outputDiv.style.display = 'block';
+            stepsDiv.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="spinner" style="margin: 0 auto 16px;"></div><p>Generating your complete video package...</p></div>';
+            
+            try {
+                // Step 1: Generate Script
+                const scriptPrompt = `Create a complete YouTube video script about "${topic}". 
+Style: ${style}. Duration: ${duration}.
 
 Please provide:
-1. Summary of the data
-2. Key statistics and metrics
-3. Trends or patterns
-4. Actionable insights
-5. Suggestions for visualization if applicable
+1. A catchy, SEO-optimized title
+2. 5-7 relevant tags
+3. An engaging description (2-3 paragraphs)
+4. The complete video script with timestamps
+5. Visual direction notes for each section
 
-Format your response with clear sections."""
+Format clearly with headers.`;
 
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": analyze_prompt}],
-            temperature=0.5,
-            max_tokens=4096
-        )
+                const scriptResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${groqKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.3-70b-versatile',
+                        messages: [
+                            { role: 'system', content: 'You are an expert YouTube content creator and scriptwriter.' },
+                            { role: 'user', content: scriptPrompt }
+                        ],
+                        temperature: 0.8,
+                        max_tokens: 4096
+                    })
+                });
+                
+                const scriptData = await scriptResponse.json();
+                const scriptContent = scriptData.choices[0].message.content;
+                
+                // Step 2: Generate Visual Prompt
+                const visualPrompt = `Based on this video about "${topic}", create a detailed AI image generation prompt for the video thumbnail. Make it eye-catching, professional, and YouTube-optimized. Just give me the prompt text.`;
+                
+                const visualResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${groqKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.3-70b-versatile',
+                        messages: [
+                            { role: 'system', content: 'You create amazing AI image prompts for YouTube thumbnails.' },
+                            { role: 'user', content: visualPrompt }
+                        ],
+                        temperature: 0.9,
+                        max_tokens: 500
+                    })
+                });
+                
+                const visualData = await visualResponse.json();
+                const thumbnailPrompt = visualData.choices[0].message.content;
+                
+                // Generate thumbnail image
+                const encodedPrompt = encodeURIComponent(thumbnailPrompt);
+                const thumbnailUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&nologo=true&seed=${Date.now()}`;
+                
+                // Step 3: Generate B-roll prompts
+                const brollPrompt = `For a YouTube video about "${topic}", create 5 detailed AI image generation prompts for B-roll footage/scenes. Number them 1-5. Each should be visually stunning and relevant.`;
+                
+                const brollResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${groqKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.3-70b-versatile',
+                        messages: [
+                            { role: 'system', content: 'You create B-roll visual prompts for video production.' },
+                            { role: 'user', content: brollPrompt }
+                        ],
+                        temperature: 0.9,
+                        max_tokens: 1000
+                    })
+                });
+                
+                const brollData = await brollResponse.json();
+                const brollContent = brollData.choices[0].message.content;
+                
+                // Display results
+                stepsDiv.innerHTML = `
+                    <div class="video-step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>🎬 Video Script, Title & Description</h4>
+                            <p>Complete script with timestamps, SEO title, tags, and description</p>
+                            <div class="step-output">${scriptContent}</div>
+                            <button class="msg-action-btn" onclick="copyToClipboard(this.parentElement.querySelector('.step-output').innerText)" style="margin-top: 8px;">
+                                <i class="fas fa-copy"></i> Copy Script
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="video-step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>🎨 Thumbnail Preview</h4>
+                            <p>AI-generated thumbnail based on optimized prompt</p>
+                            <div style="margin-top: 12px;">
+                                <img src="${thumbnailUrl}" style="width: 100%; border-radius: 12px; border: 1px solid var(--glass-border);" alt="Thumbnail">
+                            </div>
+                            <div class="step-output" style="margin-top: 12px;"><strong>Thumbnail Prompt:</strong>\\n${thumbnailPrompt}</div>
+                            <button class="msg-action-btn" onclick="window.open('${thumbnailUrl}', '_blank')" style="margin-top: 8px;">
+                                <i class="fas fa-download"></i> Download Thumbnail
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="video-step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>🎥 B-Roll Visual Prompts</h4>
+                            <p>Use these prompts to generate B-roll footage images</p>
+                            <div class="step-output">${brollContent}</div>
+                            <button class="msg-action-btn" onclick="copyToClipboard(this.parentElement.querySelector('.step-output').innerText)" style="margin-top: 8px;">
+                                <i class="fas fa-copy"></i> Copy B-Roll Prompts
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="video-step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>✅ Next Steps</h4>
+                            <p>How to create your video</p>
+                            <div class="step-output">
+1. Copy the script and record your voiceover (or use AI TTS)
+2. Use CapCut, Premiere Pro, or DaVinci Resolve to edit
+3. Download the thumbnail and use it for your video
+4. Generate B-roll images using the prompts above (use Pollinations.ai or Midjourney)
+5. Add background music from YouTube Audio Library or Epidemic Sound
+6. Upload to YouTube with the SEO title, description, and tags provided
+7. Add end screens and cards for better engagement
 
-        reply = response.choices[0].message.content
-
-        # Try to generate a chart if data looks like it has numbers
-        chart_image = None
-        try:
-            numbers = re.findall(r'\d+\.?\d*', request.message)
-            if len(numbers) >= 3:
-                chart_prompt = f"""Based on this data: {request.message}
-
-Create a Python dictionary for a bar chart with this exact format:
-{{"labels": ["label1", "label2", ...], "values": [val1, val2, ...], "title": "Chart Title"}}
-
-Return ONLY the dictionary, no other text."""
-
-                chart_response = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    messages=[{"role": "user", "content": chart_prompt}],
-                    temperature=0.3
-                )
-
-                chart_text = chart_response.choices[0].message.content
-                dict_match = re.search(r'\{.*\}', chart_text, re.DOTALL)
-                if dict_match:
-                    chart_data = eval(dict_match.group())
-                    chart_image = generate_chart("bar", chart_data, chart_data.get("title", "Analysis"))
-        except:
-            pass
-
-        return {
-            "reply": reply,
-            "chart_image": chart_image,
-            "mode": "analyze"
-        }
-    except Exception as e:
-        return {"reply": f"Analysis error: {str(e)}"}
-
-# ========== 6. FILE UPLOAD ==========
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...), session_id: str = Form("default")):
-    try:
-        content = await file.read()
-        text = extract_text_from_file(content, file.filename)
-
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute(
-            "INSERT INTO documents (session_id, filename, content, timestamp) VALUES (?, ?, ?, ?)",
-            (session_id, file.filename, text, time.time())
-        )
-        conn.commit()
-        conn.close()
-
-        client = get_client()
-        summary_prompt = f"""Summarize this document:
-
-Filename: {file.filename}
-Content (first 3000 chars): {text[:3000]}
-
-Provide:
-1. Brief summary
-2. Key points
-3. File type insights"""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": summary_prompt}],
-            temperature=0.5
-        )
-
-        reply = response.choices[0].message.content
-
-        return {
-            "reply": reply,
-            "filename": file.filename,
-            "size": len(content),
-            "text_preview": text[:500]
-        }
-    except Exception as e:
-        return {"reply": f"Upload error: {str(e)}"}
-
-# ========== 7. IMAGE GENERATION ==========
-@app.post("/generate-image")
-async def generate_image_endpoint(request: ImageRequest):
-    try:
-        prompt = request.message
-        images = []
-        for i in range(3):
-            img_url = generate_image(prompt, width=1024, height=768)
-            images.append(img_url)
-
-        return {
-            "reply": f"Generated {len(images)} images for: '{prompt}'",
-            "images": images,
-            "mode": "image"
-        }
-    except Exception as e:
-        return {"reply": f"Image generation error: {str(e)}"}
-
-# ========== 7b. IMAGE SEARCH ==========
-@app.post("/search-images")
-async def search_images_endpoint(request: ImageSearchRequest):
-    try:
-        images = search_images(request.message, request.num_results)
-        return {
-            "reply": f"Found {len(images)} images for '{request.message}'",
-            "images": images,
-            "mode": "image_search"
-        }
-    except Exception as e:
-        return {"reply": f"Image search error: {str(e)}"}
-
-# ========== 8. WEB SEARCH ==========
-@app.post("/search")
-async def search_web(request: SearchRequest):
-    try:
-        results = web_search(request.message)
-        return {"reply": results, "mode": "search"}
-    except Exception as e:
-        return {"reply": f"Search error: {str(e)}"}
-
-# ========== 9. WEATHER ==========
-@app.post("/weather")
-async def weather_endpoint(request: WeatherRequest):
-    try:
-        city = request.message.strip()
-        if not city:
-            city = "London"
-        result = get_weather(city)
-        return {"reply": result, "mode": "weather"}
-    except Exception as e:
-        return {"reply": f"Weather error: {str(e)}"}
-
-# ========== 10. NEWS ==========
-@app.post("/news")
-async def news_endpoint(request: NewsRequest):
-    try:
-        query = request.message.strip() or "technology"
-        result = get_news(query)
-        return {"reply": result, "mode": "news"}
-    except Exception as e:
-        return {"reply": f"News error: {str(e)}"}
-
-# ========== 11. ACADEMIC SEARCH ==========
-@app.post("/academic")
-async def academic_endpoint(request: AcademicRequest):
-    try:
-        result = search_academic(request.message, request.max_results)
-        return {"reply": result, "mode": "academic"}
-    except Exception as e:
-        return {"reply": f"Academic search error: {str(e)}"}
-
-# ========== 12. FINANCIAL DATA ==========
-@app.post("/financial")
-async def financial_endpoint(request: FinancialRequest):
-    try:
-        symbol = request.symbol or request.message.strip().upper()
-        symbol_match = re.search(r'[A-Z]{1,5}', request.message.upper())
-        if symbol_match:
-            symbol = symbol_match.group()
-        result = get_financial_data(symbol, "quote")
-        return {"reply": result, "mode": "financial", "symbol": symbol}
-    except Exception as e:
-        return {"reply": f"Financial data error: {str(e)}"}
-
-# ========== 13. AGENT MODE (Enhanced) ==========
-@app.post("/agent")
-async def agent_mode(request: AgentRequest):
-    try:
-        client = get_client()
-
-        tool_prompt = f"""You are an AI agent. Analyze this user request and decide which tools to use.
-
-Available tools: search, code, weather, news, image, chart, translate, sentiment, academic, financial
-
-User request: {request.message}
-
-Respond with ONLY a JSON array of tool names to use, e.g.: ["search", "code"]
-If no tools are needed, respond with: []"""
-
-        tool_response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": tool_prompt}],
-            temperature=0.3
-        )
-
-        tool_text = tool_response.choices[0].message.content.strip()
-
-        try:
-            tools_to_use = json.loads(tool_text)
-        except:
-            tools_to_use = []
-            for tool in ["search", "code", "weather", "news", "image", "chart", "translate", "sentiment", "academic", "financial"]:
-                if tool in tool_text.lower():
-                    tools_to_use.append(tool)
-
-        tool_results = {}
-
-        if "search" in tools_to_use:
-            tool_results["search"] = web_search(request.message)
-
-        if "weather" in tools_to_use:
-            cities = re.findall(r'in ([A-Za-z\s]+)', request.message)
-            if cities:
-                tool_results["weather"] = get_weather(cities[0])
-
-        if "news" in tools_to_use:
-            tool_results["news"] = get_news(request.message)
-
-        if "academic" in tools_to_use:
-            tool_results["academic"] = search_academic(request.message)
-
-        if "financial" in tools_to_use:
-            symbol_match = re.search(r'[A-Z]{1,5}', request.message.upper())
-            if symbol_match:
-                tool_results["financial"] = get_financial_data(symbol_match.group())
-
-        if "code" in tools_to_use:
-            code_prompt = f"Write Python code for: {request.message}"
-            code_response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": code_prompt}],
-                temperature=0.3
-            )
-            tool_results["code"] = code_response.choices[0].message.content
-
-        synthesis_prompt = f"""Synthesize a helpful response based on the user request and tool results.
-
-User request: {request.message}
-
-Tools used: {tools_to_use}
-
-Tool results:
-{json.dumps(tool_results, indent=2)}
-
-Provide a comprehensive, well-structured response."""
-
-        final_response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": synthesis_prompt}],
-            temperature=0.7,
-            max_tokens=4096
-        )
-
-        reply = final_response.choices[0].message.content
-
-        return {"reply": reply, "tools_used": tools_to_use, "mode": "agent"}
-    except Exception as e:
-        return {"reply": f"Agent error: {str(e)}"}
-
-# ========== 14. TEXT TO SPEECH ==========
-@app.post("/tts")
-async def tts_endpoint(request: TTSRequest):
-    try:
-        audio = text_to_speech(request.message, request.lang)
-        if audio:
-            return {"reply": f"Text converted to speech: '{request.message[:100]}...'", "audio": audio, "mode": "tts"}
-        else:
-            return {"reply": "TTS not available. Install gTTS: pip install gtts", "mode": "tts"}
-    except Exception as e:
-        return {"reply": f"TTS error: {str(e)}"}
-
-# ========== 15. CHART GENERATION ==========
-@app.post("/chart")
-async def chart_endpoint(request: ChartRequest):
-    try:
-        client = get_client()
-
-        chart_prompt = f"""Extract chart data from this request and return a Python dictionary.
-
-Request: {request.message}
-
-Return ONLY a dictionary in this exact format:
-{{"chart_type": "bar|line|pie|scatter|area", "labels": [...], "values": [...], "title": "...", "xlabel": "...", "ylabel": "..."}}
-
-If the request is vague, create sample data that makes sense."""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": chart_prompt}],
-            temperature=0.3
-        )
-
-        chart_text = response.choices[0].message.content
-        dict_match = re.search(r'\{.*\}', chart_text, re.DOTALL)
-        if dict_match:
-            chart_data = eval(dict_match.group())
-            chart_type = chart_data.get("chart_type", "bar")
-            chart_image = generate_chart(chart_type, chart_data, chart_data.get("title", "Chart"))
-
-            return {
-                "reply": f"Generated {chart_type} chart: {chart_data.get('title', 'Chart')}",
-                "chart_image": chart_image,
-                "mode": "chart"
+💡 Pro Tip: Use the script timestamps to sync your visuals perfectly!
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                showToast('Video package generated successfully!', 'success');
+                
+            } catch (error) {
+                stepsDiv.innerHTML = `<div style="color: var(--error); padding: 20px;">Error: ${error.message}</div>`;
+                showToast('Error generating video content', 'error');
             }
-        else:
-            return {"reply": "Could not parse chart data from request."}
-    except Exception as e:
-        return {"reply": f"Chart error: {str(e)}"}
-
-# ========== 16. YOUTUBE VIDEO CREATOR ==========
-@app.post("/create-video")
-async def create_video(request: VideoRequest):
-    try:
-        client = get_client()
-
-        video_prompt = f"""Create a YouTube video package for this topic:
-
-Topic: {request.message}
-
-Provide:
-1. Catchy video title
-2. SEO-optimized description (200 words)
-3. 10 relevant tags
-4. Video script outline (intro, 3 main points, outro with CTA)
-5. Thumbnail text suggestion
-6. Target audience
-
-Format clearly with headers."""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": video_prompt}],
-            temperature=0.7,
-            max_tokens=4096
-        )
-
-        reply = response.choices[0].message.content
-        thumbnail_url = generate_image(f"YouTube thumbnail: {request.message}, bold text, eye-catching, professional, 16:9", width=1280, height=720)
-
-        return {"reply": reply, "thumbnail_url": thumbnail_url, "mode": "video"}
-    except Exception as e:
-        return {"reply": f"Video creation error: {str(e)}"}
-
-# ========== 17. TRANSLATION ==========
-@app.post("/translate")
-async def translate_endpoint(request: TranslateRequest):
-    try:
-        client = get_client()
-
-        translate_prompt = f"""Translate the following text to {request.target_language}.
-
-Text: {request.message}
-
-Provide:
-1. The translation
-2. Pronunciation guide (if applicable)
-3. Cultural notes or context
-4. Alternative translations if ambiguous"""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": translate_prompt}],
-            temperature=0.3
-        )
-
-        reply = response.choices[0].message.content
-
-        return {"reply": reply, "source_language": "auto-detected", "target_language": request.target_language, "mode": "translate"}
-    except Exception as e:
-        return {"reply": f"Translation error: {str(e)}"}
-
-# ========== 18. SENTIMENT ANALYSIS ==========
-@app.post("/sentiment")
-async def sentiment_endpoint(request: SentimentRequest):
-    try:
-        client = get_client()
-
-        sentiment_prompt = f"""Analyze the sentiment of this text comprehensively.
-
-Text: {request.message}
-
-Provide:
-1. Overall sentiment (Positive/Negative/Neutral/Mixed) with confidence score
-2. Emotion breakdown (joy, anger, sadness, fear, surprise, disgust) with percentages
-3. Key phrases that indicate sentiment
-4. Tone analysis (formal, casual, aggressive, supportive, etc.)
-5. Actionable insights if this is customer feedback
-
-Format as a structured report."""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": sentiment_prompt}],
-            temperature=0.3
-        )
-
-        reply = response.choices[0].message.content
-
-        return {"reply": reply, "mode": "sentiment"}
-    except Exception as e:
-        return {"reply": f"Sentiment analysis error: {str(e)}"}
-
-# ========== 19. CREATIVE WRITING ==========
-@app.post("/creative")
-async def creative_endpoint(request: CreativeRequest):
-    try:
-        client = get_client()
-
-        genre_prompts = {
-            "story": "Write an engaging, original short story with vivid characters, immersive setting, and compelling plot.",
-            "poem": "Write an evocative, original poem with rich imagery, rhythm, and emotional depth.",
-            "script": "Write a screenplay/script scene with dialogue, stage directions, and character development.",
-            "essay": "Write a well-structured, persuasive essay with clear thesis, evidence, and conclusion.",
-            "debate": "Write a structured debate argument with clear position, evidence, rebuttals, and conclusion."
         }
 
-        creative_prompt = f"""{genre_prompts.get(request.genre, genre_prompts["story"])}
-
-Topic/Prompt: {request.message}
-
-Requirements:
-- Be original and creative
-- Use vivid, descriptive language
-- Maintain consistent tone and style
-- Engage the reader emotionally
-- Show, don't just tell"""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": creative_prompt}],
-            temperature=0.9,
-            max_tokens=4096
-        )
-
-        reply = response.choices[0].message.content
-
-        return {"reply": reply, "genre": request.genre, "mode": "creative"}
-    except Exception as e:
-        return {"reply": f"Creative writing error: {str(e)}"}
-
-# ========== 20. STUDY GUIDES ==========
-@app.post("/study")
-async def study_endpoint(request: StudyGuideRequest):
-    try:
-        client = get_client()
-
-        study_prompt = f"""Create a comprehensive study guide for the following topic at {request.level} level.
-
-Topic: {request.message}
-
-Include:
-1. Overview/Introduction
-2. Key concepts with definitions
-3. Important formulas/theories (if applicable)
-4. Step-by-step explanations with analogies
-5. Common misconceptions to avoid
-6. Practice questions with answers
-7. Summary/cheat sheet
-8. Further resources/references
-
-Adapt complexity to {request.level} level. Use analogies and examples."""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": study_prompt}],
-            temperature=0.5,
-            max_tokens=4096
-        )
-
-        reply = response.choices[0].message.content
-
-        return {"reply": reply, "level": request.level, "mode": "study"}
-    except Exception as e:
-        return {"reply": f"Study guide error: {str(e)}"}
-
-# ========== 21. DEBATE & NEGOTIATION ==========
-@app.post("/debate")
-async def debate_endpoint(request: DebateRequest):
-    try:
-        client = get_client()
-
-        debate_prompt = f"""You are a skilled debater. Analyze the following topic and present a well-reasoned argument.
-
-Topic: {request.message}
-
-Stance: {request.stance or "Analyze both sides (pro and con)"}
-
-Structure:
-1. Clear position statement
-2. Main arguments with evidence
-3. Counter-arguments and rebuttals
-4. Consideration of multiple perspectives
-5. Weighing of pros and cons
-6. Conclusion with recommendation
-
-Be persuasive, logical, and fair. Acknowledge limitations and uncertainties."""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": debate_prompt}],
-            temperature=0.7,
-            max_tokens=4096
-        )
-
-        reply = response.choices[0].message.content
-
-        return {"reply": reply, "stance": request.stance, "mode": "debate"}
-    except Exception as e:
-        return {"reply": f"Debate error: {str(e)}"}
-
-# ========== 22. EMOTIONAL INTELLIGENCE ==========
-@app.post("/emotional")
-async def emotional_endpoint(request: ChatRequest):
-    try:
-        client = get_client()
-
-        emotional_prompt = f"""You are an emotionally intelligent AI assistant. Analyze the following message and respond with empathy, understanding, and support.
-
-User message: {request.message}
-
-Instructions:
-1. Identify the emotional tone (joy, sadness, anger, anxiety, excitement, etc.)
-2. Acknowledge and validate the user's feelings
-3. Respond with genuine empathy and compassion
-4. Offer supportive, constructive guidance if appropriate
-5. Be warm, non-judgmental, and personalized
-6. Use an appropriate tone (calming, encouraging, celebratory, etc.)
-
-Be human, caring, and authentic in your response."""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": emotional_prompt}],
-            temperature=0.8,
-            max_tokens=4096
-        )
-
-        reply = response.choices[0].message.content
-
-        # Save emotional context to memory
-        save_memory(request.session_id, "last_emotion", request.message[:200])
-
-        return {"reply": reply, "mode": "emotional"}
-    except Exception as e:
-        return {"reply": f"Emotional analysis error: {str(e)}"}
-
-# ========== 23. RAG (DOCUMENT QA) ==========
-@app.post("/rag/upload")
-async def rag_upload(file: UploadFile = File(...), session_id: str = Form("default")):
-    try:
-        content = await file.read()
-        text = extract_text_from_file(content, file.filename)
-
-        if session_id not in rag_documents:
-            rag_documents[session_id] = []
-
-        rag_documents[session_id].append({
-            "filename": file.filename,
-            "content": text,
-            "timestamp": time.time()
-        })
-
-        create_rag_index(session_id, rag_documents[session_id])
-
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute(
-            "INSERT INTO documents (session_id, filename, content, timestamp) VALUES (?, ?, ?, ?)",
-            (session_id, file.filename, text, time.time())
-        )
-        conn.commit()
-        conn.close()
-
-        return {
-            "reply": f"Document '{file.filename}' uploaded and indexed. You can now ask questions about it in RAG mode.",
-            "filename": file.filename,
-            "chunks": len(text) // 500
+        // ==================== SETTINGS ====================
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('active');
         }
-    except Exception as e:
-        return {"reply": f"RAG upload error: {str(e)}"}
 
-@app.post("/rag/query")
-async def rag_query(request: RAGQueryRequest):
-    try:
-        session_id = request.session_id or "default"
-
-        rag_results = search_rag(session_id, request.message, top_k=5)
-        docs = rag_documents.get(session_id, [])
-
-        if not docs:
-            conn = sqlite3.connect(DB_PATH)
-            c = conn.cursor()
-            c.execute(
-                "SELECT filename, content FROM documents WHERE session_id = ? ORDER BY timestamp DESC",
-                (session_id,)
-            )
-            rows = c.fetchall()
-            conn.close()
-            docs = [{"filename": r[0], "content": r[1]} for r in rows]
-
-        if not docs:
-            return {"reply": "No documents found. Please upload documents first in RAG mode."}
-
-        if rag_results:
-            context_parts = [f"From {fname}:\n{chunk}" for fname, chunk in rag_results]
-            all_content = "\n\n".join(context_parts)
-        else:
-            all_content = "\n\n".join([f"--- {d['filename']} ---\n{d['content'][:5000]}" for d in docs])
-
-        client = get_client()
-
-        rag_prompt = f"""Answer the following question based ONLY on the provided documents.
-
-Documents:
-{all_content[:15000]}
-
-Question: {request.message}
-
-Instructions:
-- Answer based only on the documents provided
-- If the answer is not in the documents, say so clearly
-- Cite which document(s) you used
-- Be concise but thorough"""
-
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": rag_prompt}],
-            temperature=0.3,
-            max_tokens=4096
-        )
-
-        reply = response.choices[0].message.content
-
-        return {
-            "reply": reply,
-            "documents_used": [d["filename"] for d in docs],
-            "mode": "rag"
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
         }
-    except Exception as e:
-        return {"reply": f"RAG query error: {str(e)}"}
 
-# ========== 24. CLEAR HISTORY ==========
-@app.post("/clear")
-async def clear_history(request: ClearRequest):
-    session_id = request.session_id or "default"
-
-    if session_id in conversations:
-        conversations[session_id] = [
-            {"role": "system", "content": SYSTEM_PROMPTS["chat"]}
-        ]
-
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("DELETE FROM conversations WHERE session_id = ?", (session_id,))
-    conn.commit()
-    conn.close()
-
-    return {"status": "cleared", "session_id": session_id}
-
-# ========== 25. GET HISTORY ==========
-@app.get("/history/{session_id}")
-async def get_history(session_id: str):
-    history = get_conversation_history(session_id, limit=50)
-    return {"history": history, "session_id": session_id}
-
-# ========== 26. HEALTH CHECK ==========
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "version": "3.0.0",
-        "features_active": {
-            "groq": bool(GROQ_API_KEY),
-            "web_search": bool(TAVILY_API_KEY),
-            "weather": bool(OPENWEATHER_API_KEY),
-            "news": bool(NEWSDATA_API_KEY),
-            "tts": GTTS_AVAILABLE,
-            "pdf": PYPDF_AVAILABLE,
-            "excel": OPENPYXL_AVAILABLE,
-            "faiss": FAISS_AVAILABLE,
-            "sentence_transformers": SENTENCE_TRANSFORMERS_AVAILABLE
+        function saveSettings() {
+            state.settings = {
+                groqKey: document.getElementById('groqKey').value.trim(),
+                tavilyKey: document.getElementById('tavilyKey').value.trim(),
+                weatherKey: document.getElementById('weatherKey').value.trim(),
+                newsKey: document.getElementById('newsKey').value.trim(),
+                hfKey: document.getElementById('hfKey').value.trim()
+            };
+            localStorage.setItem('nexus_settings', JSON.stringify(state.settings));
+            closeSettings();
+            showToast('Settings saved successfully!', 'success');
         }
-    }
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 10000)))
+        // ==================== AGENT MODE ====================
+        function toggleAgentMode() {
+            state.agentMode = !state.agentMode;
+            const btn = document.getElementById('agentBtn');
+            if (state.agentMode) {
+                btn.classList.add('active');
+                showToast('Agent Mode activated! AI will use tools automatically.', 'success');
+            } else {
+                btn.classList.remove('active');
+                showToast('Agent Mode deactivated.', 'info');
+            }
+        }
+
+        // ==================== FILE UPLOAD ====================
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            state.uploadedFile = file;
+            const preview = document.getElementById('filePreview');
+            preview.innerHTML = `
+                <div class="file-preview">
+                    <i class="fas fa-file"></i>
+                    <span>${file.name} (${(file.size / 1024).toFixed(1)} KB)</span>
+                    <i class="fas fa-times remove-file" onclick="removeFile()"></i>
+                </div>
+            `;
+            showToast(`File "${file.name}" ready to upload`, 'info');
+        }
+
+        function removeFile() {
+            state.uploadedFile = null;
+            document.getElementById('filePreview').innerHTML = '';
+            document.getElementById('fileInput').value = '';
+        }
+
+        // Drag and drop
+        const inputWrapper = document.getElementById('inputWrapper');
+        const dropZone = document.getElementById('dropZone');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            inputWrapper.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        inputWrapper.addEventListener('dragenter', () => dropZone.classList.add('active'));
+        inputWrapper.addEventListener('dragleave', (e) => {
+            if (e.relatedTarget && !inputWrapper.contains(e.relatedTarget)) {
+                dropZone.classList.remove('active');
+            }
+        });
+        inputWrapper.addEventListener('drop', (e) => {
+            dropZone.classList.remove('active');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const event = { target: { files: files } };
+                handleFileUpload(event);
+            }
+        });
+
+        // ==================== VOICE INPUT ====================
+        function toggleVoiceInput() {
+            const btn = document.getElementById('voiceBtn');
+            
+            if (state.isRecording) {
+                stopRecording();
+                return;
+            }
+            
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                showToast('Speech recognition not supported in your browser. Try Chrome.', 'error');
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            state.recognition = new SpeechRecognition();
+            state.recognition.continuous = true;
+            state.recognition.interimResults = true;
+            state.recognition.lang = 'en-US';
+            
+            state.recognition.onstart = () => {
+                state.isRecording = true;
+                btn.classList.add('recording');
+                btn.innerHTML = '<i class="fas fa-stop"></i>';
+                showToast('Listening... Speak now!', 'info');
+            };
+            
+            state.recognition.onresult = (event) => {
+                let finalTranscript = '';
+                let interimTranscript = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                
+                const input = document.getElementById('messageInput');
+                if (finalTranscript) {
+                    input.value = (input.value ? input.value + ' ' : '') + finalTranscript;
+                    autoResize(input);
+                }
+            };
+            
+            state.recognition.onerror = (event) => {
+                showToast('Speech recognition error: ' + event.error, 'error');
+                stopRecording();
+            };
+            
+            state.recognition.onend = () => {
+                stopRecording();
+            };
+            
+            state.recognition.start();
+        }
+
+        function stopRecording() {
+            state.isRecording = false;
+            const btn = document.getElementById('voiceBtn');
+            btn.classList.remove('recording');
+            btn.innerHTML = '<i class="fas fa-microphone"></i>';
+            if (state.recognition) {
+                state.recognition.stop();
+                state.recognition = null;
+            }
+        }
+
+        // ==================== TEXT TO SPEECH ====================
+        function speakText(encodedText) {
+            const text = decodeURIComponent(encodedText);
+            
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]*>/g, '').substring(0, 500));
+                utterance.rate = 1;
+                utterance.pitch = 1;
+                utterance.lang = 'en-US';
+                window.speechSynthesis.speak(utterance);
+                showToast('Speaking...', 'info');
+            } else {
+                showToast('Text-to-speech not supported in your browser', 'error');
+            }
+        }
+
+        // ==================== UTILITY FUNCTIONS ====================
+        function copyMessage(btn) {
+            const content = btn.closest('.message-content').querySelector('.message-text').innerText;
+            copyToClipboard(content);
+        }
+
+        function copyCode(btn) {
+            const code = btn.nextElementSibling.innerText;
+            copyToClipboard(code);
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 2000);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied to clipboard!', 'success');
+            }).catch(() => {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('Copied to clipboard!', 'success');
+            });
+        }
+
+        async function regenerateMessage(index) {
+            if (index < 0 || index >= state.messages.length) return;
+            
+            // Remove the message and all after it
+            state.messages = state.messages.slice(0, index);
+            
+            // Re-render
+            document.getElementById('messagesContainer').innerHTML = '';
+            state.messages.forEach(msg => renderMessage(msg));
+            
+            // Get the last user message to regenerate response
+            const lastUserMsg = [...state.messages].reverse().find(m => m.role === 'user');
+            if (lastUserMsg) {
+                document.getElementById('messageInput').value = lastUserMsg.content;
+                sendMessage();
+            }
+        }
+
+        // ==================== INITIALIZATION ====================
+        renderChatHistory();
+        
+        // Close modals on overlay click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+
+        // Check for API key on load
+        if (!state.settings.groqKey) {
+            setTimeout(() => {
+                showToast('Welcome! Please add your Groq API key in Settings to start chatting.', 'info');
+            }, 1000);
+        }
+
+        console.log('%c🤖 Nexus AI Loaded!', 'color: #6366f1; font-size: 20px; font-weight: bold;');
+        console.log('%cFeatures: Chat | Code | Websites | Images | Videos | Search | Voice | Agent Mode', 'color: #a855f7; font-size: 12px;');
+    </script>
+</body>
+</html>
+'''
